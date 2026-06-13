@@ -17,11 +17,15 @@ People build CPUs inside Minecraft with redstone. Hobbyists build them on breadb
 
 ## 🧠 The idea
 
-A program is a list of **instructions**, each a 16-bit number living in a **ROM** (read-only memory). The CPU runs a relentless three-step cycle, one full cycle per clock tick:
+**Where we are:** lesson 4 gave you an ALU (the math), lesson 5 gave you registers and a clock (the memory). A **CPU** (Central Processing Unit — the part that runs programs) is essentially those two things plus a small "decoder" that reads instructions and tells everything what to do. You already built the hard parts; this lesson wires them together.
 
-1. **Fetch** — read the instruction the **program counter (PC)** points at.
-2. **Decode** — look at the opcode; figure out what to do.
-3. **Execute** — do the math, store the result, and advance (or jump) the PC.
+A program is a list of **instructions** — single commands like "add these two registers" — each encoded as a 16-bit number. They live in a **ROM** (Read-Only Memory: a lookup table that, given an address, hands back the value stored there; "read-only" because the running program doesn't change it). The CPU runs a relentless three-step cycle, one full cycle per clock tick:
+
+1. **Fetch** — read the instruction the **program counter (PC)** points at. (The PC is just a register holding an address — think of it as a finger pointing at the current line of a recipe.)
+2. **Decode** — look at the **opcode** (the few bits at the top of the instruction that say *which* command this is) and figure out what to do.
+3. **Execute** — do the math, store the result, and advance the finger to the next line (or jump it elsewhere).
+
+This fetch → decode → execute loop is exactly like reading and following a recipe one step at a time: read the current line, understand it, do it, move your finger down. The clock tick is what moves the finger.
 
 ```
    ┌──► [PC] ──► [ROM] ──► instruction
@@ -54,9 +58,23 @@ The top 4 bits (the **opcode**) say *what* to do; the rest say *which registers*
 | `0111` | `OUT ra` | show ra on the OUT display |
 | `1111` | `HLT` | stop |
 
-(Two more — `PSET` and `INK` — arrive in lesson 7, when we add a screen and keyboard.) There are 4 registers: **R0, R1, R2, R3**.
+(Two more — `PSET` and `INK` — arrive in lesson 7, when we add a screen and keyboard.) There are 4 registers: **R0, R1, R2, R3**. An *immediate* (`imm8`) just means "a constant number written right in the instruction," and an *address* (`addr8`) is a line number in the program to jump to.
 
-You write in **assembly** — human-readable mnemonics with labels and comments — and the assembler ([`src/asm.ts`](../../src/asm.ts)) turns each line into one 16-bit machine word. For example, `LDI R0, 5` becomes opcode `0100`, rd `00`, immediate `00000101`.
+You write in **assembly** — a human-readable form of machine code, using short mnemonics (`ADD`, `LDI`…) plus labels and comments instead of raw bits. The **assembler** ([`src/asm.ts`](../../src/asm.ts)) is the small program that translates each assembly line into one 16-bit machine word. For example, `LDI R0, 5` becomes opcode `0100`, rd `00`, immediate `00000101`.
+
+Here's one instruction traced through fetch → decode → execute, so the loop feels concrete:
+
+```
+  program line:  ADD R1, R1, R0          ; R1 = R1 + R0
+  ───────────────────────────────────────────────────────
+  fetch    PC points at this line; ROM hands back its 16 bits:
+           0000  01    01    00     0000
+           op    rd    ra    rb   (low imm bits, unused here)
+  decode   opcode 0000 = "ADD" -> tell the ALU to add,
+           read registers ra=R1 and rb=R0, write result to rd=R1
+  execute  ALU computes R1+R0, that value is stored into R1,
+           PC advances to the next line
+```
 
 ## 🔍 The circuit
 
@@ -131,12 +149,13 @@ done:
 npm run info -- workbench/6-cpu.compute
 ```
 
-Real output (abridged):
+Real output (the long `defined:` line abbreviated):
 
 ```
 entrypoint:  cpu
 inputs:      []  (0)
-outputs:     [pc0, ..., halt]  (49)
+outputs:     [pc0, pc1, ..., d7, halt]  (49)
+defined:     NOT, AND, ... , REG8, EDFF, ALU8, AND8, OR8, NOR8
 flattened:   1527 NAND gate(s), 1592 wire(s), 0 clock(s)
 ```
 
@@ -148,19 +167,18 @@ flattened:   1527 NAND gate(s), 1592 wire(s), 0 clock(s)
 npm run tick -- workbench/6-cpu.compute --ticks 30
 ```
 
-Real output (heavily abridged — each tick prints PC, OUT, R0–R3, and halt):
+Each tick prints every flip-flop: the PC bits `pc0..pc7`, the OUT register `o0..o7`, registers R0–R3 as `a0..a7` / `b0..b7` / `c0..c7` / `d0..d7`, and `halt`. The bits are listed **least-significant first** (`o0` is the 1s place). Here are the key ticks from the real run:
 
 ```
 loaded 9-instruction program into ROM
 cpu  in[ (none) ]   (49 flip-flops)
-  tick   1:  pc=0   ... a(R0)=0  b(R1)=0 ... halt=0
-  tick   2:  pc=1   ... a(R0)=5  ...               (LDI R0,5 took effect)
+  tick   2:  pc0=1 ... a0=1 a1=0 a2=1 a3=0 ... halt=0   (R0=5 loaded: 0101 = 5)
   ...
-  tick  24:  pc=...  o(OUT)=1111 (=15) ... halt=0   ← OUT R1 fired: 15!
-  tick  25:  ...                          halt=1   ← HLT: the CPU stops
+  tick  24:  ... o0=1 o1=1 o2=1 o3=1 o4=0 ... b0=1 b1=1 b2=1 b3=1 ... halt=0
+  tick  25:  ...                                                     halt=1
 ```
 
-Reading the `o0..o7` bits at tick 24 as binary: `1111` = **15**. Then `halt=1` latches and the PC freezes — the program is done. **Your gates just ran a loop, added five numbers, and printed the answer.** 🧠
+Read the OUT bits at tick 24 least-significant first: `o0 o1 o2 o3 = 1 1 1 1` = binary `1111` = **15**. (R1, shown as `b0..b3 = 1111`, also holds 15 — the accumulated sum.) On tick 25 `halt=1` latches and the PC freezes — the program is done and stays done. **Your gates just ran a loop, added five numbers, and printed the answer.** 🧠
 
 **Run it in the browser:**
 
@@ -171,10 +189,34 @@ npm run serve -- workbench/6-cpu.compute
 Open **http://localhost:8080**. The program is already in the code box. Press **Step** to advance one instruction at a time (watch R0 count down, R1 climb), or **Run** to let it rip. The PC, OUT, and all four registers light up live.
 
 ## 🧪 Your turn
-1. **Multiply by adding.** Write a program that computes 3 × 4 using a loop of repeated addition, then `OUT` the result (12) and `HLT`.
-2. **Count down to launch.** Load R0 = 9, then loop: `OUT R0`, subtract 1, `BEQZ` to a done label, else `JMP` back. Watch the countdown on OUT.
-3. **Use the logic ops.** `LDI` two values, then `AND` or `OR` them into a third register and `OUT` it. Predict the bits first.
-4. **Break it on purpose.** Remove the `HLT`. What does the PC do when it runs off the end of your program? (Hint: it keeps fetching whatever's in ROM.)
+Type each program into the code box in the browser (`npm run serve -- workbench/6-cpu.compute`) and press **Run**. Ordered easiest first; one has a full worked answer.
+
+1. **Use the logic ops (warm-up).** `LDI` two values into two registers, then `AND` or `OR` them into a third register and `OUT` it. Predict the bits first. *Hint: `LDI R0, 12` and `LDI R1, 10`, then `AND R2, R0, R1` gives `12 & 10 = 8` (1100 & 1010 = 1000).*
+2. **Count down to launch.** Load R0 = 9, then loop: `OUT R0`, subtract 1, `BEQZ` to a `done` label, else `JMP` back. Watch the countdown on OUT. *Hint: you need a register holding the constant 1 to subtract; remember `BEQZ R0, done` jumps only when R0 has reached 0.*
+3. **Multiply by adding.** Write a program that computes 3 × 4 using a loop of repeated addition, then `OUT` the result (12) and `HLT`. *Hint: add 4 to an accumulator, three times — almost exactly the demo program's shape.*
+
+   <details><summary>Show answer</summary>
+
+   ```asm
+   ; 3 x 4 by repeated addition -> 12
+     LDI R0, 4        ; value to add each pass
+     LDI R1, 0        ; accumulator (the running total)
+     LDI R2, 3        ; how many times to add
+     LDI R3, 1        ; constant 1, to decrement the counter
+   loop:
+     ADD R1, R1, R0   ; total += 4
+     SUB R2, R2, R3   ; counter -= 1
+     BEQZ R2, done    ; counter hit 0? stop looping
+     JMP loop
+   done:
+     OUT R1           ; -> 12
+     HLT
+   ```
+
+   R1 ends at `4 + 4 + 4 = 12`, which appears on the OUT display, then the CPU halts.
+
+   </details>
+4. **Break it on purpose.** Remove the `HLT`. What does the PC do when it runs off the end of your program? *Hint: the PC just keeps incrementing and fetching whatever bits happen to sit in ROM past your last line — usually all zeros, which decode as `ADD R0,R0,R0`.*
 
 ## 🔗 Going deeper
 - [Von Neumann architecture — Wikipedia](https://en.wikipedia.org/wiki/Von_Neumann_architecture) — the fetch-decode-execute design your CPU follows.

@@ -15,9 +15,11 @@ Every computer chip on Earth — the one in your phone, your laptop, a game cons
 People build working calculators (and even computers!) inside Minecraft using redstone. It feels like magic. It isn't. It's just NAND, over and over. In this lesson you take the very first brick out of the box.
 
 ## 🧠 The idea
-A **bit** is the smallest piece of information: it's either `0` (off) or `1` (on). A **logic gate** takes one or more bits in and produces a bit out, following a fixed rule.
+**Where we are:** you just installed educom. This is the very first brick. Everything in the next eight lessons grows out of what you build right here.
 
-**NAND** stands for "**N**ot **AND**". It looks at two input bits and outputs `0` *only* when both inputs are `1` — otherwise it outputs `1`. Here's its truth table (a truth table just lists the output for every possible input):
+A **bit** is the smallest piece of information: it's either `0` (off) or `1` (on). Think of a single light switch. A **wire** carries one bit from one place to another. A **logic gate** is a tiny device that takes one or more bits in and produces a bit out, following a fixed rule — like a rule-following light switch that watches other switches.
+
+**NAND** stands for "**N**ot **AND**". It looks at two input bits and outputs `0` *only* when both inputs are `1` — otherwise it outputs `1`. Here's its **truth table** — a chart that simply lists the output for every possible combination of inputs (with two inputs there are only four combinations, so four rows):
 
 ```
  a  b | NAND
@@ -28,7 +30,7 @@ A **bit** is the smallest piece of information: it's either `0` (off) or `1` (on
  1  1 |  0     <- the only time NAND is 0
 ```
 
-That single rule is enough to build everything. Watch:
+Here's a helpful way to picture it: NAND is like a single shape of LEGO brick. You might think you need a whole box of different shapes to build something interesting — but it turns out this *one* brick, snapped together in clever ways, can make every other shape you'll ever need. That single rule is enough to build everything. Watch:
 
 **NOT (flip a bit).** If you feed the *same* wire into both inputs of a NAND, you get the inverse:
 
@@ -119,9 +121,27 @@ a  b  |  c
 The output `c` is `1` on exactly one row — when both `a` and `b` are `1`. That's AND. ✅
 
 ## 🧪 Your turn
-1. **Predict, then check.** Before running the table command, cover the output column and predict each row yourself. Were you right?
-2. **Test your NOT.** Add a tiny entry gate that exposes `NOT`: change `#% entry : AND` to `#% entry : NOT`, then run `npm run table -- workbench/0-simple-and.compute`. You should see `a=0 → 1` and `a=1 → 0`. (Put it back to `AND` when you're done.)
-3. **Build a NAND-only NOR gate.** NOR is "not OR" — it's `1` only when *both* inputs are `0`. As a stretch, sketch on paper how you'd make it. (Hint: OR can be built from NANDs too — you'll see exactly how in the next lesson!)
+Ordered easy → harder. Each has a hint; the first has a worked answer you can peek at.
+
+1. **Predict, then check.** Before running `npm run table`, cover the output column with your hand and predict the value of `c` on each of the four rows. Then run it and compare. *Hint: AND is `1` only when both inputs are `1`.*
+
+   <details><summary>Show answer</summary>
+
+   ```
+   a  b  |  c
+   ----------
+   0  0  |  0
+   0  1  |  0
+   1  0  |  0
+   1  1  |  1
+   ```
+   Only the last row (`1` and `1`) gives `c = 1`. Every other row has at least one `0`, so AND is `0`.
+
+   </details>
+
+2. **Test your NOT.** Change `#% entry : AND` to `#% entry : NOT` at the top of the file, then run `npm run table -- workbench/0-simple-and.compute`. You should see `a=0 → 1` and `a=1 → 0` (the input flipped). *Hint: a NOT gate has only one input, so its table has just two rows. Put the directive back to `AND` when you're done.*
+
+3. **Build a NAND-only NOR gate (stretch).** NOR is "not OR" — it outputs `1` only when *both* inputs are `0`. On paper, sketch how you'd wire it from NANDs. *Hint: OR can be built from NANDs too (you'll see exactly how in the next lesson), and NOR is just OR followed by a NOT — and you already know NOT is `NAND(x, x)`.*
 
 ## 🔗 Going deeper
 - [Wikipedia: NAND logic](https://en.wikipedia.org/wiki/NAND_logic) — how every gate reduces to NAND, with diagrams.

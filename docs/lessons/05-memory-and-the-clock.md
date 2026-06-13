@@ -16,9 +16,11 @@ The leap from "calculates" to "computes" is the leap into **time**. A CPU does o
 
 ## 🧠 The idea
 
-How do you make a gate *remember*? Combinational logic can't — there's nowhere to store the bit. So we introduce exactly **one** new building block, a native primitive called the **DFF** (D flip-flop).
+**Where we are:** in lesson 4 you built an ALU — a calculator that produces an answer the instant you set its inputs, then forgets it the moment they change. Every circuit so far has been **combinational**: output is a pure function of the inputs *right now*, with no memory. This lesson adds the missing ingredient — a circuit that can *hold a value over time* — which makes it **sequential**: its output depends on the past, not just the present.
 
-A DFF has one input `d` and one output `q`, plus a hidden connection to the **clock**. Its rule is dead simple:
+How do you make a gate *remember*? Combinational logic can't — there's nowhere to store the bit. So we introduce exactly **one** new building block, a native primitive called the **DFF** (short for **D flip-flop** — a one-bit memory cell).
+
+A DFF has one input `d` and one output `q`, plus a hidden connection to the **clock** — a signal that "ticks" at a steady beat, like a metronome, telling every memory cell in the machine when to update together. A single beat of that signal is a **clock tick**. The DFF's rule is dead simple:
 
 > On each clock **tick**, `q` becomes whatever `d` was.
 > Between ticks, `q` holds steady — it *remembers*.
@@ -29,7 +31,9 @@ A DFF has one input `d` and one output `q`, plus a hidden connection to the **cl
    clk ►└─────┘
 ```
 
-That hold-and-remember behavior is what storage *is*. A register is just 8 DFFs side by side. RAM is millions of them.
+Think of a DFF as a light switch wired to a metronome: it only flips to match the wall switch (`d`) on the *beat*, and holds its position in between. You can fiddle with `d` all you like between ticks — `q` ignores you until the next tick.
+
+That hold-and-remember behavior is what storage *is*. A **register** (a small named box that holds one value the machine works with) is just 8 DFFs side by side, holding 8 bits. RAM is millions of them.
 
 **Why is the DFF a native, when everything else is built from NAND?** Because an edge-triggered register depends on the *moment the clock flips* — the transition from low to high. Our simulator has no notion of time passing; it just settles every wire to a stable value. There's no "instant" for it to detect an edge. So the DFF is one of the project's [honest exceptions](../../README.md#-the-one-rule-everything-is-nand): a primitive we provide because it genuinely cannot be a fixed gate netlist.
 
@@ -108,10 +112,18 @@ npm run serve -- workbench/5-counter.compute
 Open **http://localhost:8080** and press the **Tick** / clock control. The 7-segment "Count" display climbs 0…F and rolls over.
 
 ## 🧪 Your turn
-1. **Count by 2.** What would you change so the counter skips odd numbers (0, 2, 4, …)? Hint: you'd add 2 instead of 1 — or just ignore the lowest bit.
-2. **Make it 3 bits.** Drop one DFF and adjust `INC4`. Now it counts 0–7 and wraps at 8. Verify with `--ticks 10`.
-3. **Predict the wrap.** Before running, write down which tick a 5-bit counter would wrap on. Then test your reasoning.
-4. **Spot the feedback.** In the file, trace `q0` from the DFF output, through `INC4`, back to `d0`. That loop *is* the memory.
+Ordered easiest first. Each has a hint; one has a worked answer.
+
+1. **Spot the feedback (warm-up).** In the file, trace `q0` from the DFF output, through `INC4`, back to `d0`. That loop *is* the memory. *Hint: `q0` is an output of a DFF and also an input to `INC4`; `INC4`'s output `d0` feeds back into the same DFF.*
+2. **Predict the wrap.** Before running, write down which tick a 5-bit counter would wrap on. *Hint: 5 bits count 0…31, so it wraps after 32 values.*
+
+   <details><summary>Show answer</summary>
+
+   A 5-bit counter counts `0` through `31` (that's 32 distinct values). Starting from tick 1 showing `0`, value `31` appears on tick 32, and it wraps back to `0` on **tick 33** — exactly the 4-bit pattern (wrapped on tick 17 = after 16 values) scaled up.
+
+   </details>
+3. **Count by 2.** What would you change so the counter skips odd numbers (0, 2, 4, …)? *Hint: feed `INC4` a step of 2 instead of 1 — or simply ignore the lowest bit `q0` and read `q3 q2 q1` as the value.*
+4. **Make it 3 bits.** Drop one DFF (say `d3`/`q3`) and adjust `INC4` to a 3-bit increment. Now it counts 0–7 and wraps at 8. *Hint: remove the last `HALFADD` chain link; verify with `npm run tick -- workbench/5-counter.compute --ticks 10`.*
 
 ## 🔗 Going deeper
 - [Flip-flop (electronics) — Wikipedia](https://en.wikipedia.org/wiki/Flip-flop_(electronics)) — the real component, and why edge-triggering matters.

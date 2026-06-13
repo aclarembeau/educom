@@ -17,7 +17,9 @@ This is the final brick. You started at lesson 0 with a single NAND gate and the
 
 ## 🧠 The idea
 
-The CPU from lesson 6 is already a complete processor. To make it a computer, we bolt on two **peripherals** — devices at the edge of the machine:
+**Where we are:** in lesson 6 you finished a working CPU — it fetches, decodes, and executes a program all by itself. But a processor that only talks to itself can't *show* you anything. This final lesson connects it to the outside world.
+
+The CPU from lesson 6 is already a complete processor. To make it a computer, we bolt on two **peripherals** — devices at the edge of the machine that connect it to the outside world (your monitor and keyboard are real peripherals):
 
 - **SCREEN** — a 16×16 grid of pixels (256 in total). A program turns a pixel on or off by *writing* to it.
 - **KEYBOARD** — an 8-bit value holding the code of the key currently pressed. A program *reads* it.
@@ -38,7 +40,22 @@ To drive them, we add **two new instructions** to the set:
 | `1000` | `PSET ra, rb` | set pixel number `ra` to `rb & 1` (on if the low bit is 1) |
 | `1001` | `INK rd` | read the keyboard into register `rd` |
 
-So `PSET R0, R1` lights the pixel at index R0 (0–255, scanning the grid) using the low bit of R1. `INK R0` grabs whatever key you're pressing into R0.
+So `PSET R0, R1` lights the pixel at index R0 (0–255, counting left-to-right then top-to-bottom across the grid) using the low bit of R1. `INK R0` grabs whatever key you're pressing into R0.
+
+Here's `PSET R0, R1` lighting one pixel, traced concretely:
+
+```
+   R0 = 17   ->  pixel index 17
+   R1 = 1    ->  low bit is 1  ->  "on"
+
+   index 17 on a 16-wide grid = row 1, column 1:
+      col:  0  1  2  ... 15
+   row 0:   .  .  .       .      (indices  0..15)
+   row 1:   .  ■  .       .      (index 17 -> lit)   ← PSET turns this on
+   row 2:   .  .  .       .
+```
+
+The demo program's stride of 17 (one row down + one column right each step) is exactly why the dots march down the diagonal.
 
 **Why are the screen and keyboard natives, not gates?** Same honest reason as the switches and LEDs from the early lessons, and the DFF and ROM before: they're the **boundary to the outside world**, not logic. A pixel you can see and a key you can press aren't things a NAND netlist can *be* — they're where the circuit meets reality. Everything *between* them is still gates you built.
 
@@ -121,10 +138,32 @@ Open **http://localhost:8080** and press **Run**. Here's what to do:
 > ⚠️ Note: `npm run serve` starts a web server that keeps running until you stop it (Ctrl-C). That's expected — it's the live UI.
 
 ## 🧪 Your turn
-1. **Draw a different shape.** Change the stride in R3 (try 16 for a vertical line, or 1 for a horizontal one). Run and watch.
-2. **Make a box.** Write a program that lights the four corners of the screen with four `PSET`s.
-3. **Echo with math.** In the key loop, `ADD` a constant to the key before `OUT`-ing it, so you transform each press.
-4. **Two diagonals.** After the first line finishes, draw a second one going the other way (stride 15 steps right-and-down the opposite slant). Make an X.
+Edit the program in the code box (`npm run serve -- workbench/7-computer.compute`) and press **Run**. Ordered easiest first; one has a full worked answer.
+
+1. **Draw a different shape (warm-up).** Change the stride in R3 (try 16 for a vertical line, or 1 for a horizontal one). Run and watch. *Hint: the stride is the number added to the pixel index each loop; 16 moves straight down, 1 moves straight right.*
+2. **Echo with math.** In the key loop, `ADD` a constant to the key before `OUT`-ing it, so you transform each press. *Hint: `LDI R1, 1` once before the loop, then `ADD R0, R0, R1` between `INK R0` and `OUT R0`.*
+3. **Make a box.** Write a program that lights the four corners of the screen with four `PSET`s, then `HLT`. *Hint: on a 16×16 grid the corners are pixel indices 0, 15, 240, and 255. You need an "on" value (low bit 1) in one register, and each index in another.*
+
+   <details><summary>Show answer</summary>
+
+   ```asm
+   ; light the four corners of the 16x16 screen
+     LDI R1, 1        ; "on" (low bit 1)
+     LDI R0, 0        ; top-left corner
+     PSET R0, R1
+     LDI R0, 15       ; top-right
+     PSET R0, R1
+     LDI R0, 240      ; bottom-left  (row 15 * 16)
+     PSET R0, R1
+     LDI R0, 255      ; bottom-right
+     PSET R0, R1
+     HLT
+   ```
+
+   Each `LDI R0, n` loads a corner's index, and `PSET R0, R1` lights it. Run it and four dots appear at the corners.
+
+   </details>
+4. **Two diagonals (stretch).** After the first line finishes, draw a second one along the opposite slant (stride 15 steps right-and-down the other way). Make an X. *Hint: a second draw loop with R3 = 15 and a starting index of 15 (top-right) walks the anti-diagonal.*
 
 ## 🔗 Going deeper
 - [Memory-mapped I/O — Wikipedia](https://en.wikipedia.org/wiki/Memory-mapped_I/O_and_port-mapped_I/O) — how real CPUs talk to screens and keyboards.

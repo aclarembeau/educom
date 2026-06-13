@@ -15,6 +15,8 @@ In Lesson 0 you made NOT and AND. With OR and XOR added, you have the complete t
 And the multiplexer? It's how a chip *chooses*. "If this control bit is on, send signal B through; otherwise send A." That's an `if` statement made of wires. Every time your CPU decides which value to use, a multiplexer is doing the choosing.
 
 ## 🧠 The idea
+**Where we are:** in Lesson 0 you built NOT and AND out of pure NAND. Now we round out the family with OR and XOR (still from NAND), then build your first *decision-making* circuit. Every new gate here is made only from gates you already have.
+
 Here are the three classic two-input gates side by side:
 
 ```
@@ -32,13 +34,15 @@ Here are the three classic two-input gates side by side:
 
 **Building OR from NAND.** There's a beautiful rule called **De Morgan's law** that says `a OR b` equals `NAND(NOT a, NOT b)`. In words: flip both inputs, then NAND them. Try it on the table above and you'll see it works.
 
-**The multiplexer (MUX).** A 2-to-1 mux has three inputs: two data wires `a` and `b`, and a **selector** `s`. The output is:
+**The multiplexer (MUX).** A *multiplexer* (mux, for short) is a circuit that **chooses** between inputs. A 2-to-1 mux has three inputs: two data wires `a` and `b`, and a **selector** `s` (the control bit that decides which one gets through). The output is:
 
 ```
-y = s ? b : a
+y = s ? b : a        (read: "if s, then b, else a")
 ```
 
-If the selector `s` is `0`, the output is `a`. If `s` is `1`, the output is `b`. It's a switch you control with a bit — a wire-level `if`.
+If the selector `s` is `0`, the output is `a`. If `s` is `1`, the output is `b`.
+
+Picture a **railroad switch**: two tracks of trains are running, and a lever (the selector) decides which track reaches the station. Or, if you've seen a little code: it's an `if` statement made of wires — `if (s) y = b; else y = a;`. Every time a CPU decides which value to use, a multiplexer is doing the choosing.
 
 ## 🔍 The circuit
 Open [`workbench/1-basic-gates.compute`](../../workbench/1-basic-gates.compute). The first interesting line is:
@@ -99,6 +103,17 @@ MUX2:
 
 Read it as: "let `a` through when `s` is `0` (`ns AND a`), let `b` through when `s` is `1` (`s AND b`), then OR the two paths together." Exactly one path is ever active, so `y` is whichever input the selector chose.
 
+Here's the mux in a compact truth table — notice the output `y` always equals one of the inputs, picked by `s`:
+
+```
+ s  a  b | y
+---------+---
+ 0  0  1 | 0   <- s=0, so y = a (=0)
+ 0  1  0 | 1   <- s=0, so y = a (=1)
+ 1  0  1 | 1   <- s=1, so y = b (=1)
+ 1  1  0 | 0   <- s=1, so y = b (=0)
+```
+
 The file also defines a `BUF` (clean copy of a wire), `ZERO` and `ONE` (constants derived from any wire), and `AND4` (a 4-input AND). You'll meet these again in later steps.
 
 ## ▶️ Try it
@@ -130,10 +145,21 @@ a  b  |  g_and  g_or  g_xor
 Look at the `g_xor` column: `0, 1, 1, 0`. Lit when the inputs differ, dark when they match. That's XOR. ✅
 
 ## 🧪 Your turn
-1. **Predict the OR column** before you run the table. Easy warm-up.
-2. **Spot the difference.** Compare the `g_and` and `g_xor` columns. They agree on three rows and differ on exactly one — which row, and why? (Think about what `1 AND 1` does versus `1 XOR 1`.)
-3. **Build a NOR gate.** NOR is "not OR". Add a `NOR:` gate that does `OR` then `NOT` (you can call both — they're already defined!). Point `#% entry` at a small test gate and check that it's `1` only on the `0 0` row.
-4. **Stretch: a 4-to-1 mux.** Using two `MUX2` calls plus one more `MUX2`, can you sketch a selector that picks between *four* inputs using two selector bits? (Hint: mux the first pair, mux the second pair, then mux those two results.)
+Ordered easy → harder. Each has a hint; #2 has a worked answer.
+
+1. **Predict the OR column** before you run `npm run table`. *Hint: OR is `1` whenever at least one input is `1`.* Easy warm-up.
+
+2. **Spot the difference.** Compare the `g_and` and `g_xor` columns in the table. They agree on three rows and differ on exactly one — which row, and why? *Hint: think about `1 AND 1` versus `1 XOR 1`.*
+
+   <details><summary>Show answer</summary>
+
+   They differ on the last row, `a=1, b=1`. There, `AND` is `1` (both inputs are on) but `XOR` is `0` (the inputs are the *same*, and XOR is only `1` when inputs *differ*). On the other three rows the inputs are not both `1`, so both gates give the same value.
+
+   </details>
+
+3. **Build a NOR gate.** NOR is "not OR". Add a `NOR:` gate that calls `OR` then `NOT` — both are already defined, so you can just reuse them! Point `#% entry` at a small test gate that calls `NOR`, run `npm run table`, and check that the output is `1` only on the `0 0` row. *Hint: a NOR body is two lines: `OR [a, b], [t]` then `NOT [t], [c]`.*
+
+4. **Stretch: a 4-to-1 mux.** Using three `MUX2` calls, can you sketch a circuit that picks between *four* inputs using two selector bits? *Hint: use the low selector bit to mux the first pair and the second pair, then use the high selector bit to mux those two results — a little tree of muxes.*
 
 ## 🔗 Going deeper
 - [Wikipedia: Logic gate](https://en.wikipedia.org/wiki/Logic_gate) — the full gate family with symbols and tables.

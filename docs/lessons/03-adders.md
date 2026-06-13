@@ -15,11 +15,28 @@ Last lesson's half adder could only add two lone bits. But real numbers have man
 A half adder can't accept that incoming carry. So we upgrade it to a **full adder**, then line up a row of them — each one's carry-out feeding the next one's carry-in. The carry "ripples" along the chain. With four of them you add any two 4-bit numbers. With eight, any two 8-bit numbers. This *exact* circuit is inside every CPU's arithmetic unit. You're about to build the real thing.
 
 ## 🧠 The idea
-**The full adder.** A full adder adds **three** bits: `a`, `b`, and a carry-in `cin`. It still produces a sum and a carry-out. Why three? Because when you're partway down a multi-bit addition, each column has the two original bits *plus* whatever carried in from the column to its right.
+**Where we are:** in Lesson 2 you built the half adder — it adds two single bits and produces a sum and a carry. The catch: it can't accept a carry coming *in*. This lesson fixes that and chains adders together so you can add real, multi-bit numbers.
+
+**The full adder.** A full adder adds **three** bits: `a`, `b`, and a carry-in `cin` (the carry arriving *from the column on its right*). It still produces a sum and a carry-out (the carry leaving toward the column on its left). Why three inputs? Because when you're partway down a multi-bit addition, each column has the two original bits *plus* whatever carried in from the column to its right.
 
 You build a full adder from **two half adders**: first half-add `a` and `b`, then half-add that result with `cin`. If *either* of those half-adds produced a carry, the carry-out is `1` — so you OR the two carries together.
 
-**Ripple-carry: adding many bits.** Imagine adding two 4-bit numbers, `a` and `b`. Number them bit `0` (the **least-significant**, rightmost) up to bit `3` (most-significant, leftmost). You add column by column, passing each carry forward:
+Here's the full adder's truth table for all eight input combinations (`sum` is `1` when an odd number of inputs are `1`; `cout` is `1` when at least two inputs are `1`):
+
+```
+ a  b cin | cout sum
+----------+---------
+ 0  0  0  |  0    0
+ 0  0  1  |  0    1
+ 0  1  0  |  0    1
+ 0  1  1  |  1    0
+ 1  0  0  |  0    1
+ 1  0  1  |  1    0
+ 1  1  0  |  1    0
+ 1  1  1  |  1    1     <- 1+1+1 = binary 11 = three
+```
+
+**Ripple-carry: adding many bits.** Imagine adding two 4-bit numbers, `a` and `b`. We number the bits from the right. Bit `0` is the **least-significant bit** — the rightmost, "ones" digit, the one worth the least. Bit `3` is the **most-significant bit** — the leftmost, worth the most (just like the leftmost digit of `9000` carries the most weight). You add column by column, passing each carry forward:
 
 ```
         a3  a2  a1  a0
@@ -29,7 +46,7 @@ You build a full adder from **two half adders**: first half-add `a` and `b`, the
         s3  s2  s1  s0   + a final carry-out
 ```
 
-The carry from column 0 flows into column 1, its carry flows into column 2, and so on — it **ripples** down the line. That's why it's called a *ripple-carry adder*. The result needs **5** bits for two 4-bit inputs: four sum bits plus that final carry-out (because `15 + 15 = 30`, which needs a 5th bit).
+The carry from column 0 flows into column 1, its carry flows into column 2, and so on — it **ripples** down the line, the way a single drop sends a wave spreading across a pond. That's why it's called a *ripple-carry adder*. The result needs **5** bits for two 4-bit inputs: four sum bits plus that final carry-out (because `15 + 15 = 30`, which needs a 5th bit).
 
 Worked example: `5 + 7 = 12`.
 
@@ -142,10 +159,34 @@ flattened:   63 NAND gate(s), 71 wire(s), 0 clock(s)
 A 4-bit adder is **63 NAND gates** — every one of them traceable back to the single primitive you started with in Lesson 0. 🔩
 
 ## 🧪 Your turn
-1. **Predict before you run.** What's `3 + 6`? Work out the switch settings (`a = 0011`, `b = 0110`), then run `npm run run -- workbench/3-adder.compute --in a0=1,a1=1,b1=1,b2=1` and check the result is `9` (`s3 s2 s1 s0 = 1001`).
-2. **Make the carry fire.** Find an A and B whose sum is `16` or more, so the `carry` output is `1`. (Smallest example: `8 + 8`.) Run it and confirm.
-3. **Trace the ripple.** For `7 + 1` (`0111 + 0001`), follow the carry by hand through all four full adders. Which columns produce a carry, and where does the ripple stop? Then verify with `npm run run`.
-4. **Stretch:** Skim `ADD8` in the file. How many `FULLADD` calls does it have, and what changes versus `ADD4`? Could you sketch an `ADD16` the same way?
+Ordered easy → harder. Each has a hint; #3 has a worked answer.
+
+1. **Predict before you run.** What's `3 + 6`? Work out the switch settings (`a = 0011`, `b = 0110`), then run:
+   ```bash
+   npm run run -- workbench/3-adder.compute --in a0=1,a1=1,b1=1,b2=1
+   ```
+   Check the result is `9`. *Hint: read the output bits most-significant first — `carry s3 s2 s1 s0` should be `0 1 0 0 1` = binary `1001` = 9.*
+
+2. **Make the carry fire.** Find an A and B whose sum is `16` or more, so the `carry` output (the 5th bit) turns on. The smallest example is `8 + 8`:
+   ```bash
+   npm run run -- workbench/3-adder.compute --in a3=1,b3=1
+   ```
+   *Hint: `8` is `1000` in binary, so only bit 3 is set. Confirm `carry=1` and all four sum bits are `0` — that's `10000` = 16.*
+
+3. **Trace the ripple.** For `7 + 1` (`0111 + 0001`), follow the carry by hand through all four full adders. Which columns produce a carry, and where does the ripple stop? Then verify with `npm run run -- workbench/3-adder.compute --in a0=1,a1=1,a2=1,b0=1`. *Hint: start at column 0 (`1 + 1`).*
+
+   <details><summary>Show answer</summary>
+
+   - Column 0: `1 + 1 = 10` → sum `0`, **carry out 1**.
+   - Column 1: `1 + 0` plus carry-in `1` = `10` → sum `0`, **carry out 1**.
+   - Column 2: `1 + 0` plus carry-in `1` = `10` → sum `0`, **carry out 1**.
+   - Column 3: `0 + 0` plus carry-in `1` = `1` → sum `1`, carry out `0`. The ripple **stops here**.
+
+   Result bits (`carry s3 s2 s1 s0`) = `0 1 0 0 0` = binary `1000` = **8**, and `7 + 1 = 8`. ✅ The run confirms `s3=1`, everything else `0`.
+
+   </details>
+
+4. **Stretch:** Skim `ADD8` in the file. How many `FULLADD` calls does it have, and what changes versus `ADD4`? Could you sketch an `ADD16` the same way? *Hint: count the `FULLADD` lines in `ADD8` — there's one per bit — and notice the carry wire `k` threading through each one.*
 
 ## 🔗 Going deeper
 - [Wikipedia: Adder (electronics) — ripple-carry adder](https://en.wikipedia.org/wiki/Adder_(electronics)#Ripple-carry_adder) — the chain you just built, with timing notes on *why* the ripple has a speed cost.
