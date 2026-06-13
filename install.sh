@@ -41,10 +41,10 @@ else
 fi
 
 # educom has zero runtime dependencies — nothing to npm-install. Just link it.
-chmod +x "$EDUCOM_HOME/src/cli.ts"
+chmod +x "$EDUCOM_HOME/bin/educom.mjs" "$EDUCOM_HOME/src/cli.ts"
 mkdir -p "$BIN_DIR"
-ln -sf "$EDUCOM_HOME/src/cli.ts" "$BIN_DIR/educom"
-info "Linked $BIN_DIR/educom -> $EDUCOM_HOME/src/cli.ts"
+ln -sf "$EDUCOM_HOME/bin/educom.mjs" "$BIN_DIR/educom"
+info "Linked $BIN_DIR/educom -> $EDUCOM_HOME/bin/educom.mjs"
 
 # Make sure the launcher is reachable.
 case ":${PATH}:" in

@@ -30,7 +30,9 @@ npx github:aclarembeau/educom table 2-half-adder.compute
 npx github:aclarembeau/educom serve 0-simple-and.compute
 ```
 
-The first run fetches the repo (a few seconds); later runs are cached.
+On first use educom clones the lessons into `~/.educom` (so it needs **git**);
+later runs reuse that copy. (This is because Node won't run TypeScript from
+inside `node_modules`, so educom runs itself from a real checkout instead.)
 
 ---
 
@@ -94,11 +96,11 @@ Now edits to your clone are reflected immediately. See
 
 ## 🪟 A note on Windows
 
-Global installs (`curl`, `npm -g`, `npx`) rely on a Unix-style shebang to run
-educom's native TypeScript, so they work best on **macOS and Linux** (and on
-Windows via **WSL**). On plain Windows, the friction-free route is to clone the
-repo and use the `npm run …` scripts (`npm start`, `npm run table -- <file>`,
-etc.) from [GETTING_STARTED.md](../GETTING_STARTED.md).
+`npx` and `npm -g` work on Windows too (they go through a small Node launcher
+that clones the lessons into `%USERPROFILE%\.educom` on first run — git
+required). The **`curl | sh`** one-liner is the only Unix-shell-specific option;
+on Windows use `npx`/`npm -g`, **WSL**, or just clone the repo and run the
+`npm run …` scripts from [GETTING_STARTED.md](../GETTING_STARTED.md).
 
 ---
 

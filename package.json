@@ -4,7 +4,7 @@
   "description": "Build a working computer from a single NAND gate — a no-build TypeScript simulator you learn by climbing, gate by gate, up to a CPU.",
   "type": "module",
   "bin": {
-    "educom": "./src/cli.ts"
+    "educom": "./bin/educom.mjs"
   },
   "scripts": {
     "educom": "node --experimental-strip-types src/cli.ts",
