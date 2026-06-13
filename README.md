@@ -39,6 +39,18 @@ Now open **http://localhost:8080** — and there it is: your first gate, an **AN
 
 Want a guided tour from here? Head to **[GETTING_STARTED.md](GETTING_STARTED.md)**.
 
+### Prefer it global? 🌍
+
+No clone required — run it straight from GitHub, or install an `educom` command:
+
+```bash
+npx github:aclarembeau/educom serve 0-simple-and.compute        # try it, no install
+curl -fsSL https://raw.githubusercontent.com/aclarembeau/educom/main/install.sh | sh   # install
+npm install -g github:aclarembeau/educom                        # or via npm
+```
+
+Then `educom serve 0-simple-and.compute` works from any folder. Full details (incl. Windows) in **[docs/install.md](docs/install.md)**.
+
 ---
 
 ## 🧗 The journey

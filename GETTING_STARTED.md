@@ -17,6 +17,8 @@ npm start          # opens an interactive circuit at http://localhost:8080
 
 Open **http://localhost:8080**, flip the two switches, and watch the light turn on only when *both* are on. That's it — you're running real digital logic. The rest of this page explains what you're looking at and where to go next.
 
+> 🌍 **Don't want to clone?** Run educom straight from GitHub with `npx github:aclarembeau/educom serve 0-simple-and.compute`, or install a global `educom` command (curl / npm). See **[docs/install.md](docs/install.md)**.
+
 ---
 
 ## 🧰 Prerequisites

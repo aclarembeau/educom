@@ -1,5 +1,7 @@
-#!/usr/bin/env node --experimental-strip-types
-import { readFileSync } from "node:fs";
+#!/usr/bin/env -S node --experimental-strip-types
+import { readFileSync, existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve, join, basename } from "node:path";
 import { ParseError } from "./parser.ts";
 import { loadProgram } from "./loader.ts";
 import { evaluate, flatten, tick, initialState, SimError, type Netlist } from "./simulator.ts";
@@ -7,6 +9,24 @@ import { serve } from "./server.ts";
 import { detectEntry, detectCode } from "./ui.ts";
 import { assemble } from "./asm.ts";
 import type { Bit, Program } from "./types.ts";
+
+// The educom install root (one level up from src/). Used so a globally
+// installed `educom` can find the bundled lessons no matter the current dir.
+const PKG_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+/**
+ * Resolve a `.compute` file argument. Tries it as given (relative to the user's
+ * CWD or absolute) first; if that doesn't exist, falls back to the bundled
+ * lessons shipped with educom — so `educom serve 0-simple-and.compute` (or
+ * `workbench/0-simple-and.compute`) works from anywhere after a global install.
+ */
+function resolveInputFile(file: string): string {
+  if (existsSync(file)) return file;
+  for (const c of [join(PKG_ROOT, file), join(PKG_ROOT, "workbench", file), join(PKG_ROOT, "workbench", basename(file))]) {
+    if (existsSync(c)) return c;
+  }
+  return file; // fall through; the normal "cannot read" error will fire
+}
 
 const USAGE = `educom — build a computer from a single NAND gate
 
@@ -105,9 +125,11 @@ function fail(msg: string): never {
 
 function load(args: Args): { program: Program; net: Netlist; source: string } {
   if (!args.file) fail("no input file given (try --help)");
+  // Accept a bundled lesson name from any directory after a global install.
+  const file = resolveInputFile(args.file!);
   let source: string;
   try {
-    source = readFileSync(args.file!, "utf8");
+    source = readFileSync(file, "utf8");
   } catch {
     fail(`cannot read file '${args.file}'`);
   }
@@ -115,7 +137,7 @@ function load(args: Args): { program: Program; net: Netlist; source: string } {
   const entry = args.entryExplicit ? args.entry : detectEntry(source!);
   try {
     // loadProgram resolves any `#% import` chain before flattening.
-    const program = loadProgram(args.file!, entry);
+    const program = loadProgram(file, entry);
     return { program, net: flatten(program), source: source! };
   } catch (e) {
     if (e instanceof ParseError || e instanceof SimError) fail(e.message);
@@ -234,7 +256,7 @@ function main(): void {
       // Only override the entry if the user passed --entry explicitly; otherwise
       // let the server read the `#% entry` directive from the file.
       const override = args.entryExplicit ? args.entry : undefined;
-      return serve(args.file!, args.port, override);
+      return serve(resolveInputFile(args.file!), args.port, override);
     }
     case "":
     case "help":
