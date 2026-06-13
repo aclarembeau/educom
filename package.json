@@ -1,13 +1,13 @@
 {
-  "name": "compute",
+  "name": "educom",
   "version": "1.0.0",
-  "description": "A TypeScript computer simulator: build a computer out of NAND gates and run it.",
+  "description": "Build a working computer from a single NAND gate — a no-build TypeScript simulator you learn by climbing, gate by gate, up to a CPU.",
   "type": "module",
   "bin": {
-    "compute": "./src/cli.ts"
+    "educom": "./src/cli.ts"
   },
   "scripts": {
-    "compute": "node --experimental-strip-types src/cli.ts",
+    "educom": "node --experimental-strip-types src/cli.ts",
     "start": "node --experimental-strip-types src/cli.ts serve workbench/0-simple-and.compute",
     "serve": "node --experimental-strip-types src/cli.ts serve",
     "run": "node --experimental-strip-types src/cli.ts run",

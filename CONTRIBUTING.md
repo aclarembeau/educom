@@ -39,8 +39,8 @@ A quick map of the repository so you know where things live:
 - **`workbench/`** — the `.compute` hardware lessons: the gates and components
   that learners build up, from a single NAND gate all the way to a CPU.
 - **`test/`** — unit tests for the engine.
-- **`docs/`** — written lessons and explanations. This directory may not exist
-  yet, and that's completely fine.
+- **`docs/`** — written lessons and explanations: the [lessons](docs/lessons/README.md),
+  the [`.compute` language reference](docs/language.md), and a [how-it-works](docs/how-it-works.md) tour.
 
 ## 📚 Adding or improving a lesson
 

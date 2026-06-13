@@ -8,14 +8,14 @@ import { detectEntry, detectCode } from "./ui.ts";
 import { assemble } from "./asm.ts";
 import type { Bit, Program } from "./types.ts";
 
-const USAGE = `compute — a NAND-gate computer simulator
+const USAGE = `educom — build a computer from a single NAND gate
 
-Usage:
-  compute run   <file> [--entry NAME] [--in a=1,b=0,...] [--cycles N]
-  compute tick  <file> [--entry NAME] [--in a=1,b=0,...] [--ticks N]
-  compute table <file> [--entry NAME]
-  compute info  <file> [--entry NAME]
-  compute serve <file> [--port N]
+Usage (or run the same via npm, e.g. \`npm run table -- <file>\`):
+  educom run   <file> [--entry NAME] [--in a=1,b=0,...] [--cycles N]
+  educom tick  <file> [--entry NAME] [--in a=1,b=0,...] [--ticks N]
+  educom table <file> [--entry NAME]
+  educom info  <file> [--entry NAME]
+  educom serve <file> [--port N]
 
 Commands:
   run     Evaluate the circuit once for a given set of input bits.
@@ -33,9 +33,10 @@ Options:
   --port N       Port for the web server (default 8080).
 
 Examples:
-  compute run   program.compute --in a=1,b=1,c=1
-  compute table program.compute
-  compute info  program.compute`;
+  educom table workbench/2-half-adder.compute
+  educom run   workbench/0-simple-and.compute --in a=1,b=1
+  educom tick  workbench/5-counter.compute --ticks 20
+  educom info  workbench/4-calculator.compute`;
 
 interface Args {
   command: string;

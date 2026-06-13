@@ -15,7 +15,7 @@ Every computer chip on Earth — the one in your phone, your laptop, a game cons
 People build working calculators (and even computers!) inside Minecraft using redstone. It feels like magic. It isn't. It's just NAND, over and over. In this lesson you take the very first brick out of the box.
 
 ## 🧠 The idea
-**Where we are:** you just installed educom. This is the very first brick. Everything in the next eight lessons grows out of what you build right here.
+**Where we are:** you just installed educom. This is the very first brick. Everything in the lessons that follow grows out of what you build right here.
 
 A **bit** is the smallest piece of information: it's either `0` (off) or `1` (on). Think of a single light switch. A **wire** carries one bit from one place to another. A **logic gate** is a tiny device that takes one or more bits in and produces a bit out, following a fixed rule — like a rule-following light switch that watches other switches.
 
