@@ -8,6 +8,7 @@
   },
   "scripts": {
     "compute": "node --experimental-strip-types src/cli.ts",
+    "start": "node --experimental-strip-types src/cli.ts serve workbench/0-simple-and.compute",
     "serve": "node --experimental-strip-types src/cli.ts serve",
     "run": "node --experimental-strip-types src/cli.ts run",
     "tick": "node --experimental-strip-types src/cli.ts tick",

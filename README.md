@@ -30,8 +30,10 @@ educom lets you build that tower yourself, from the very first gate up to a real
 
 ```bash
 npm install
-npm run serve -- workbench/0-simple-and.compute
+npm start          # serves lesson 0 at http://localhost:8080
 ```
+
+`npm start` is the shortcut — it's exactly equivalent to the explicit form `npm run serve -- workbench/0-simple-and.compute`.
 
 Now open **http://localhost:8080** — and there it is: your first gate, an **AND** built from nothing but NAND. Flip the two switches on the page and watch the light turn on only when *both* are on. You just simulated real digital logic. 💡
 

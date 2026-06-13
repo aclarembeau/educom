@@ -6,6 +6,19 @@ By the end of this page you'll have the project running, your first gate lit up,
 
 ---
 
+## ⏱️ 60-second quick start
+
+```bash
+git clone https://github.com/aclarembeau/educom.git
+cd educom
+npm install
+npm start          # opens an interactive circuit at http://localhost:8080
+```
+
+Open **http://localhost:8080**, flip the two switches, and watch the light turn on only when *both* are on. That's it — you're running real digital logic. The rest of this page explains what you're looking at and where to go next.
+
+---
+
 ## 🧰 Prerequisites
 
 You need three things:
@@ -21,6 +34,8 @@ node --version
 ```
 
 If it prints `v22.6.0` or higher, you're good. If not, upgrade from [nodejs.org](https://nodejs.org/).
+
+> 💡 **Using [nvm](https://github.com/nvm-sh/nvm)?** The repo ships an `.nvmrc`, so just run `nvm use` in the project folder to switch to the right Node version (or `nvm install 22 && nvm use` the first time).
 
 ---
 
@@ -46,8 +61,10 @@ npm install
 Start the very first circuit:
 
 ```bash
-npm run serve -- workbench/0-simple-and.compute
+npm start
 ```
+
+`npm start` is a shortcut that serves lesson 0 — it's exactly the same as the explicit `npm run serve -- workbench/0-simple-and.compute`.
 
 Now open **http://localhost:8080** in your browser.
 
@@ -58,7 +75,13 @@ You'll see two **switches** and one **light**. This circuit is an **AND** gate �
 
 That's real digital logic. The light only comes on when *both* inputs are on — the definition of AND — and every bit of it decomposes to NANDs underneath.
 
-When you're done, stop the server with **Ctrl+C**.
+When you're done, **stop the server with `Ctrl+C`** in the terminal.
+
+**Want a different lesson?** Stop the server and serve any other workbench file by name, for example:
+
+```bash
+npm run serve -- workbench/2-half-adder.compute
+```
 
 ---
 
@@ -82,7 +105,8 @@ Every command takes a `.compute` file. They all come straight from `package.json
 
 | Command | What it does | Example |
 |---------|--------------|---------|
-| `npm run serve` | Launch the interactive web UI (live-reloads on save). | `npm run serve -- workbench/0-simple-and.compute` |
+| `npm start` | Shortcut: serve lesson 0 in the interactive web UI. | `npm start` |
+| `npm run serve` | Launch the interactive web UI on any file (live-reloads on save). | `npm run serve -- workbench/0-simple-and.compute` |
 | `npm run run` | Evaluate the circuit once. Set inputs with `--in`. | `npm run run -- workbench/2-half-adder.compute --in a=1,b=0` |
 | `npm run tick` | Advance a clocked circuit; `--ticks N` for N ticks (default 16). | `npm run tick -- workbench/5-counter.compute --ticks 8` |
 | `npm run table` | Print the full truth table over every input combination. | `npm run table -- workbench/2-half-adder.compute` |
@@ -98,8 +122,9 @@ Every command takes a `.compute` file. They all come straight from `package.json
 
 The `workbench/` folder is a numbered staircase, and there's a lesson for every step. **Start at Lesson 0 and climb** — each step builds on the one before it.
 
+▶️ **Start the course → [Lesson 0: The NAND Gate](docs/lessons/00-the-nand-gate.md)**
+
 - 📚 **[The lessons index](docs/lessons/README.md)** — all 8 lessons at a glance.
-- 0️⃣ **[Lesson 0 — The NAND gate](docs/lessons/00-the-nand-gate.md)** — start here.
 
 Want the full language reference or to peek under the hood?
 
@@ -110,8 +135,15 @@ Want the full language reference or to peek under the hood?
 
 ## 🆘 Troubleshooting
 
-**"Unsupported / unknown TypeScript syntax" or strip-types errors**
-Your Node is too old. educom needs **Node >= 22.6.0** for native TypeScript. Check with `node --version` and upgrade from [nodejs.org](https://nodejs.org/).
+**"command not found: npm"**
+Node (which ships with `npm`) isn't installed yet. Install it from [nodejs.org](https://nodejs.org/) — make sure you get **>= 22.6.0** — then re-run the commands.
+
+**"Unknown / unsupported TypeScript syntax" or strip-types errors**
+Your Node is too old. educom needs **Node >= 22.6.0** for native TypeScript. Check with `node --version` and upgrade from [nodejs.org](https://nodejs.org/). With nvm, the quickest fix is:
+
+```bash
+nvm install 22 && nvm use
+```
 
 **"Port already in use" / `EADDRINUSE`**
 Something is already on port 8080. Pick another one:
