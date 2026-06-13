@@ -1,0 +1,42 @@
+# ============================================================================
+#  Step 0 — the first gate.  Everything is built from ONE primitive: NAND.
+# ============================================================================
+#
+#  NAND(a, b) = NOT (a AND b).  It is the only logic native; every other gate
+#  in this whole project decomposes into NANDs.
+#
+#  Here we build the two gates the rest of the progression starts from:
+#     NOT a   = NAND(a, a)
+#     a AND b = NOT(NAND(a, b))
+#
+#  Later steps `#% import` this file to reuse NOT and AND instead of
+#  re-deriving them. That is the whole idea: each `.compute` file adds a few
+#  gates on top of the ones the previous file already defined.
+#
+#  Try it:
+#     npm run table -- workbench/0-simple-and.compute     # truth table
+#     npm run serve -- workbench/0-simple-and.compute     # flip the switches
+#
+#  A definition is `NAME:` followed by an indented body. Inside:
+#     IN  [..]            declares the input wires
+#     OUT [..]            declares the output wires
+#     GATE [in] [out]     calls another gate, naming its input and output wires
+
+#% entry  : AND
+#% title  : Step 0 — AND from NAND
+#% switch a : A
+#% switch b : B
+#% led c    : A AND B
+
+# NOT a = NAND(a, a): feeding the same wire to both inputs gives the inverse.
+NOT:
+	IN [a]
+	OUT [b]
+	NAND [a, a], [b]
+
+# a AND b = NOT(NAND(a, b)): NAND already is "not and", so invert it once more.
+AND:
+	IN [a, b]
+	OUT [c]
+	NAND [a, b], [t]       # t = NOT(a AND b)
+	NAND [t, t], [c]       # c = NOT t = a AND b

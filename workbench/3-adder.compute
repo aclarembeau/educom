@@ -1,0 +1,110 @@
+# ============================================================================
+#  Step 3 — multi-bit ADDERS and the vector building blocks
+# ============================================================================
+#
+#  Imports step 2 (HALFADD). A FULL ADDER adds three bits (a, b, carry-in):
+#     two half-adds plus an OR on the carries.
+#  Chain N full adders carry-to-carry and you get an N-bit ripple adder.
+#
+#  This step defines the reusable arithmetic/vector blocks the calculator, CPU
+#  and counter all lean on:
+#     FULLADD            1-bit add with carry-in
+#     ADD4, ADD8         4- and 8-bit ripple adders
+#     INC8               8-bit increment (a + 1), used by the CPU's program counter
+#     NOT8               bitwise NOT of 8 bits
+#     MUX8               8-bit wide 2:1 selector
+#
+#  The entry circuit `adder4` adds two 4-bit numbers and shows A, B and the
+#  5-bit result (carry is the top bit) on hex displays:
+#
+#     npm run serve -- workbench/3-adder.compute
+
+#% import : 2-half-adder.compute
+
+#% entry  : adder4
+#% title  : Step 3 — 4-bit Adder
+#% switch a3 : A.3
+#% switch a2 : A.2
+#% switch a1 : A.1
+#% switch a0 : A.0
+#% switch b3 : B.3
+#% switch b2 : B.2
+#% switch b1 : B.1
+#% switch b0 : B.0
+#% seg7 carry s3 s2 s1 s0 : A + B
+
+adder4:
+	IN [a0, a1, a2, a3, b0, b1, b2, b3]
+	OUT [s0, s1, s2, s3, carry]
+	ZERO [a0], [z]                                  # carry-in = 0
+	ADD4 [a0, a1, a2, a3, b0, b1, b2, b3, z], [s0, s1, s2, s3, carry]
+
+# Full adder: s = a^b^cin, cout = majority(a, b, cin).
+FULLADD:
+	IN [a, b, cin]
+	OUT [s, cout]
+	HALFADD [a, b], [s1, c1]
+	HALFADD [s1, cin], [s, c2]
+	OR [c1, c2], [cout]
+
+# 4-bit ripple-carry adder.
+ADD4:
+	IN [a0, a1, a2, a3, b0, b1, b2, b3, cin]
+	OUT [s0, s1, s2, s3, cout]
+	FULLADD [a0, b0, cin], [s0, k0]
+	FULLADD [a1, b1, k0], [s1, k1]
+	FULLADD [a2, b2, k1], [s2, k2]
+	FULLADD [a3, b3, k2], [s3, cout]
+
+# 8-bit ripple-carry adder.
+ADD8:
+	IN [a0, a1, a2, a3, a4, a5, a6, a7, b0, b1, b2, b3, b4, b5, b6, b7, cin]
+	OUT [s0, s1, s2, s3, s4, s5, s6, s7, cout]
+	FULLADD [a0, b0, cin], [s0, k0]
+	FULLADD [a1, b1, k0], [s1, k1]
+	FULLADD [a2, b2, k1], [s2, k2]
+	FULLADD [a3, b3, k2], [s3, k3]
+	FULLADD [a4, b4, k3], [s4, k4]
+	FULLADD [a5, b5, k4], [s5, k5]
+	FULLADD [a6, b6, k5], [s6, k6]
+	FULLADD [a7, b7, k6], [s7, cout]
+
+# Increment an 8-bit number by 1. Adding 1 to the low bit is a half-add against
+# the constant 1: sum = NOT a0, carry = a0 — so no constant wire is needed.
+INC8:
+	IN [a0, a1, a2, a3, a4, a5, a6, a7]
+	OUT [s0, s1, s2, s3, s4, s5, s6, s7]
+	NOT [a0], [s0]
+	HALFADD [a1, a0], [s1, c1]
+	HALFADD [a2, c1], [s2, c2]
+	HALFADD [a3, c2], [s3, c3]
+	HALFADD [a4, c3], [s4, c4]
+	HALFADD [a5, c4], [s5, c5]
+	HALFADD [a6, c5], [s6, c6]
+	HALFADD [a7, c6], [s7, c7]
+
+# Bitwise NOT of 8 bits.
+NOT8:
+	IN [a0, a1, a2, a3, a4, a5, a6, a7]
+	OUT [y0, y1, y2, y3, y4, y5, y6, y7]
+	NOT [a0], [y0]
+	NOT [a1], [y1]
+	NOT [a2], [y2]
+	NOT [a3], [y3]
+	NOT [a4], [y4]
+	NOT [a5], [y5]
+	NOT [a6], [y6]
+	NOT [a7], [y7]
+
+# 8-bit wide 2:1 selector:  y = s ? b : a, applied bit by bit.
+MUX8:
+	IN [s, a0, a1, a2, a3, a4, a5, a6, a7, b0, b1, b2, b3, b4, b5, b6, b7]
+	OUT [y0, y1, y2, y3, y4, y5, y6, y7]
+	MUX2 [s, a0, b0], [y0]
+	MUX2 [s, a1, b1], [y1]
+	MUX2 [s, a2, b2], [y2]
+	MUX2 [s, a3, b3], [y3]
+	MUX2 [s, a4, b4], [y4]
+	MUX2 [s, a5, b5], [y5]
+	MUX2 [s, a6, b6], [y6]
+	MUX2 [s, a7, b7], [y7]

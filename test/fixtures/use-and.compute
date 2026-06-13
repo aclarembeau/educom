@@ -1,0 +1,10 @@
+# Imports and-lib.compute and builds a 3-input AND on top of its AND — i.e. it
+# uses a gate it never defines itself. The loader must resolve the import.
+#% import : and-lib.compute
+#% entry : and3
+
+and3:
+	IN [a, b, c]
+	OUT [y]
+	AND [a, b], [t]
+	AND [t, c], [y]

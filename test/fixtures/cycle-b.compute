@@ -1,0 +1,7 @@
+# Other half of the deliberate import cycle (see cycle-a.compute).
+#% import : cycle-a.compute
+
+B:
+	IN [a]
+	OUT [b]
+	NAND [a, a], [b]

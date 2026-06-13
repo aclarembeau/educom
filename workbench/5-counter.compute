@@ -1,0 +1,45 @@
+# ============================================================================
+#  Step 5 — a 4-bit COUNTER:  the first SEQUENTIAL circuit
+# ============================================================================
+#
+#  Everything so far has been combinational — outputs are a pure function of the
+#  inputs. To *remember* a value across clock ticks we need the one sequential
+#  native, `DFF` (D flip-flop): on each tick its output `q` takes whatever its
+#  input `d` was at the end of the previous settle.
+#
+#  Why a native? An edge-triggered register depends on the clock *transition*,
+#  and a delay-free fixed-point simulator has no notion of time, so it can't
+#  derive edge timing from gates. (A level-sensitive latch *can* be built from
+#  NAND feedback — but a clean clocked register can't.)
+#
+#  This counter holds the count in four flip-flops; combinational logic (INC4,
+#  built from the imported HALFADD/NOT) computes count+1 and feeds it back, so
+#  each tick advances the count.
+#
+#     npm run tick -- workbench/5-counter.compute --ticks 20
+
+#% import : 4-calculator.compute
+
+#% entry : counter
+#% title : Step 5 — 4-bit Counter
+#% seg7 q3 q2 q1 q0 : Count
+
+counter:
+	IN []
+	OUT [q3, q2, q1, q0]
+	# State: four flip-flops holding the current count.
+	DFF [d0], [q0]
+	DFF [d1], [q1]
+	DFF [d2], [q2]
+	DFF [d3], [q3]
+	# Next state = count + 1.
+	INC4 [q0, q1, q2, q3], [d0, d1, d2, d3]
+
+# Increment a 4-bit number by 1 (the 4-bit sibling of step 3's INC8).
+INC4:
+	IN [a0, a1, a2, a3]
+	OUT [s0, s1, s2, s3]
+	NOT [a0], [s0]
+	HALFADD [a1, a0], [s1, c1]
+	HALFADD [a2, c1], [s2, c2]
+	HALFADD [a3, c2], [s3, c3]

@@ -1,0 +1,120 @@
+# ============================================================================
+#  Step 7 — a small COMPUTER:  CPU + screen + keyboard
+# ============================================================================
+#
+#  Imports step 6, so the entire register file / ALU / decoder / every gate is
+#  already defined. The only thing this file adds is a `computer` that wires the
+#  CPU to two memory-less I/O peripherals:
+#
+#     SCREEN   — a 16x16 pixel display, written by the PSET instruction
+#     KEYBOARD — an 8-bit key code, read by the INK instruction
+#
+#  Peripherals are natives for the same reason switches and LEDs are: they are
+#  the boundary between the circuit and the outside world, not logic.
+#
+#  Extra instructions (on top of ADD/SUB/AND/OR/LDI/JMP/BEQZ/OUT/HLT):
+#     1000 PSET ra, rb   pixel[ra] = rb & 1
+#     1001 INK  rd       rd = keyboard
+#
+#  The demo program draws a diagonal line, then echoes key presses to OUT.
+#
+#     npm run serve -- workbench/7-computer.compute
+#     (Click the screen area, then press number/letter keys.)
+
+#% import : 6-cpu.compute
+
+#% entry  : computer
+#% title  : Step 7 — Small Computer (CPU + Screen + Keyboard)
+#% rom     : program
+#% screen  : 16 16
+#% keyboard : Keyboard
+#% code : ; draw a diagonal, then echo the keyboard
+#% code :   LDI R0, 0       ; pixel index
+#% code :   LDI R1, 1       ; "on" / step of 1
+#% code :   LDI R2, 16      ; 16 pixels to draw
+#% code :   LDI R3, 17      ; diagonal stride (x+1,y+1)
+#% code : draw:
+#% code :   PSET R0, R1     ; light pixel[R0]
+#% code :   ADD R0, R0, R3
+#% code :   SUB R2, R2, R1
+#% code :   BEQZ R2, keys
+#% code :   JMP draw
+#% code : keys:
+#% code :   INK R0          ; read a key
+#% code :   OUT R0          ; show its code
+#% code :   JMP keys
+#% seg7 pc7 pc6 pc5 pc4 pc3 pc2 pc1 pc0 : PC
+#% seg7 o7 o6 o5 o4 o3 o2 o1 o0 : OUT (key)
+#% led halt : HALT
+
+# ============================================================================
+computer:
+	IN []
+	OUT [pc0,pc1,pc2,pc3,pc4,pc5,pc6,pc7, o0,o1,o2,o3,o4,o5,o6,o7, halt]
+
+	# ---- program counter + fetch ----
+	DFF [pn0],[pc0]
+	DFF [pn1],[pc1]
+	DFF [pn2],[pc2]
+	DFF [pn3],[pc3]
+	DFF [pn4],[pc4]
+	DFF [pn5],[pc5]
+	DFF [pn6],[pc6]
+	DFF [pn7],[pc7]
+	ROM [pc0,pc1,pc2,pc3,pc4,pc5,pc6,pc7], [i0,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10,i11,i12,i13,i14,i15]
+
+	# ---- opcode + decode ----
+	BUF [i12],[op0]
+	BUF [i13],[op1]
+	BUF [i14],[op2]
+	BUF [i15],[op3]
+	NOT [op3],[nop3]
+	NOT [op2],[nop2]
+	NOT [op1],[nop1]
+	NOT [op0],[nop0]
+	AND [nop3,nop2],[isalu]               # 00xx
+	AND4 [nop3,op2,nop1,nop0],[isldi]      # 0100
+	AND4 [nop3,op2,nop1,op0],[isjmp]       # 0101
+	AND4 [nop3,op2,op1,nop0],[isbeqz]      # 0110
+	AND4 [nop3,op2,op1,op0],[isout]        # 0111
+	AND4 [op3,nop2,nop1,nop0],[ispset]     # 1000
+	AND4 [op3,nop2,nop1,op0],[isink]       # 1001
+	AND4 [op3,op2,op1,op0],[ishlt]         # 1111
+	OR [isalu,isldi],[rw1]
+	OR [rw1,isink],[regwrite]              # ALU / LDI / INK write a register
+
+	# ---- register read ports ----
+	REG4READ [i8,i9, a0,a1,a2,a3,a4,a5,a6,a7, b0,b1,b2,b3,b4,b5,b6,b7, c0,c1,c2,c3,c4,c5,c6,c7, d0,d1,d2,d3,d4,d5,d6,d7], [ra0,ra1,ra2,ra3,ra4,ra5,ra6,ra7]
+	REG4READ [i6,i7, a0,a1,a2,a3,a4,a5,a6,a7, b0,b1,b2,b3,b4,b5,b6,b7, c0,c1,c2,c3,c4,c5,c6,c7, d0,d1,d2,d3,d4,d5,d6,d7], [rb0,rb1,rb2,rb3,rb4,rb5,rb6,rb7]
+
+	# ---- ALU + write-back source select ----
+	ALU8 [op0,op1, ra0,ra1,ra2,ra3,ra4,ra5,ra6,ra7, rb0,rb1,rb2,rb3,rb4,rb5,rb6,rb7], [al0,al1,al2,al3,al4,al5,al6,al7]
+	KEYBOARD [k0,k1,k2,k3,k4,k5,k6,k7]
+	# writeData = INK ? key : (LDI ? imm : alu)
+	MUX8 [isldi, al0,al1,al2,al3,al4,al5,al6,al7, i0,i1,i2,i3,i4,i5,i6,i7], [wa0,wa1,wa2,wa3,wa4,wa5,wa6,wa7]
+	MUX8 [isink, wa0,wa1,wa2,wa3,wa4,wa5,wa6,wa7, k0,k1,k2,k3,k4,k5,k6,k7], [w0,w1,w2,w3,w4,w5,w6,w7]
+
+	# ---- register writes ----
+	WDEC [i10,i11, regwrite], [we0,we1,we2,we3]
+	REG8 [we0, w0,w1,w2,w3,w4,w5,w6,w7], [a0,a1,a2,a3,a4,a5,a6,a7]
+	REG8 [we1, w0,w1,w2,w3,w4,w5,w6,w7], [b0,b1,b2,b3,b4,b5,b6,b7]
+	REG8 [we2, w0,w1,w2,w3,w4,w5,w6,w7], [c0,c1,c2,c3,c4,c5,c6,c7]
+	REG8 [we3, w0,w1,w2,w3,w4,w5,w6,w7], [d0,d1,d2,d3,d4,d5,d6,d7]
+
+	# ---- OUT register ----
+	REG8 [isout, ra0,ra1,ra2,ra3,ra4,ra5,ra6,ra7], [o0,o1,o2,o3,o4,o5,o6,o7]
+
+	# ---- SCREEN: PSET ra, rb -> pixel[ra_val] = rb_val[0] ----
+	SCREEN [ra0,ra1,ra2,ra3,ra4,ra5,ra6,ra7, rb0, ispset], []
+
+	# ---- halt latch ----
+	OR [halt,ishlt],[haltnext]
+	DFF [haltnext],[halt]
+
+	# ---- next PC ----
+	INC8 [pc0,pc1,pc2,pc3,pc4,pc5,pc6,pc7], [p10,p11,p12,p13,p14,p15,p16,p17]
+	NOR8 [ra0,ra1,ra2,ra3,ra4,ra5,ra6,ra7], [raZero]
+	AND [isbeqz,raZero],[takeb]
+	OR [isjmp,takeb],[dojump]
+	MUX8 [dojump, p10,p11,p12,p13,p14,p15,p16,p17, i0,i1,i2,i3,i4,i5,i6,i7], [u0,u1,u2,u3,u4,u5,u6,u7]
+	MUX8 [halt, u0,u1,u2,u3,u4,u5,u6,u7, pc0,pc1,pc2,pc3,pc4,pc5,pc6,pc7], [pn0,pn1,pn2,pn3,pn4,pn5,pn6,pn7]

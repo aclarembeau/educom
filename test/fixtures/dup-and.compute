@@ -1,0 +1,9 @@
+# Imports and-lib.compute (which defines AND) and then redefines AND — a
+# duplicate across the import boundary, which the loader must reject.
+#% import : and-lib.compute
+#% entry : AND
+
+AND:
+	IN [a, b]
+	OUT [c]
+	NAND [a, b], [c]

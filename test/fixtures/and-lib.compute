@@ -1,0 +1,7 @@
+# A tiny importable "library": AND built from the NAND native.
+# Imported by use-and.compute and dup-and.compute to exercise the loader.
+AND:
+	IN [a, b]
+	OUT [c]
+	NAND [a, b], [t]
+	NAND [t, t], [c]

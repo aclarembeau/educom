@@ -1,0 +1,8 @@
+# Half of a deliberate import cycle (cycle-a -> cycle-b -> cycle-a). The loader
+# must detect this and report it rather than recursing forever.
+#% import : cycle-b.compute
+
+A:
+	IN [a]
+	OUT [b]
+	NAND [a, a], [b]

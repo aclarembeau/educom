@@ -1,0 +1,36 @@
+# ============================================================================
+#  Step 2 — the HALF ADDER:  add two single bits
+# ============================================================================
+#
+#  Imports step 1, so XOR and AND are already defined. A half adder adds two
+#  bits `a` and `b` and produces a `sum` bit and a `carry` bit:
+#
+#       a b | carry sum
+#       0 0 |   0    0
+#       0 1 |   0    1
+#       1 0 |   0    1
+#       1 1 |   1    0      <- 1 + 1 = binary 10
+#
+#  sum   = a XOR b   (1 when the bits differ)
+#  carry = a AND b   (1 only when both are 1)
+#
+#  HALFADD is the first reusable arithmetic block — step 3 chains it into
+#  multi-bit adders and the counter step uses it to increment.
+#
+#     npm run table -- workbench/2-half-adder.compute
+#     npm run serve -- workbench/2-half-adder.compute
+
+#% import : 1-basic-gates.compute
+
+#% entry  : HALFADD
+#% title  : Step 2 — Half Adder
+#% switch a : A
+#% switch b : B
+#% led s : Sum
+#% led c : Carry
+
+HALFADD:
+	IN [a, b]
+	OUT [s, c]
+	XOR [a, b], [s]       # sum   = a XOR b
+	AND [a, b], [c]       # carry = a AND b

@@ -1,0 +1,215 @@
+# ============================================================================
+#  Step 6 — a small single-cycle RISC CPU:  NAND + DFF + one ROM
+# ============================================================================
+#
+#  Imports step 5, so every gate (adders, MUX8, NOT8, INC8, the constants) and
+#  the DFF native are already available. This step adds the register file, the
+#  ALU, the instruction decoder, and the CPU that ties them together.
+#
+#  8-bit data, 16-bit instructions, 4 registers (R0..R3), 8-bit PC. One
+#  instruction executes per clock tick. Instructions live in a ROM whose
+#  contents are typed into the UI (assembled to machine code) — that runtime-
+#  loaded program is why ROM is a native and not gates.
+#
+#  Encoding:  op[15:12] rd[11:10] ra[9:8] rb[7:6] imm/addr[7:0]
+#
+#    0000 ADD  rd,ra,rb     0100 LDI  rd,imm8     0111 OUT ra
+#    0001 SUB  rd,ra,rb     0101 JMP  addr8       1111 HLT
+#    0010 AND  rd,ra,rb     0110 BEQZ ra,addr8
+#    0011 OR   rd,ra,rb
+#
+#  Run from the UI:  npm run serve -- workbench/6-cpu.compute
+#  (Type a program in the textarea, then Step / Run.)
+
+#% import : 5-counter.compute
+
+#% entry  : cpu
+#% title  : Step 6 — Small RISC CPU
+#% rom    : program            # 16-bit instruction memory, loaded from the code box
+#% code   : ; sum 1..5 into R1, then OUT and halt
+#% code   :   LDI R0, 5        ; counter
+#% code   :   LDI R1, 0        ; accumulator
+#% code   :   LDI R2, 1        ; constant 1
+#% code   : loop:
+#% code   :   ADD R1, R1, R0   ; acc += counter
+#% code   :   SUB R0, R0, R2   ; counter -= 1
+#% code   :   BEQZ R0, done
+#% code   :   JMP loop
+#% code   : done:
+#% code   :   OUT R1           ; -> 15
+#% code   :   HLT
+#% seg7 pc7 pc6 pc5 pc4 pc3 pc2 pc1 pc0 : PC
+#% seg7 o7 o6 o5 o4 o3 o2 o1 o0 : OUT
+#% seg7 a7 a6 a5 a4 a3 a2 a1 a0 : R0
+#% seg7 b7 b6 b5 b4 b3 b2 b1 b0 : R1
+#% seg7 c7 c6 c5 c4 c3 c2 c1 c0 : R2
+#% seg7 d7 d6 d5 d4 d3 d2 d1 d0 : R3
+#% led halt : HALT
+
+# ============================================================================
+cpu:
+	IN []
+	OUT [pc0,pc1,pc2,pc3,pc4,pc5,pc6,pc7, o0,o1,o2,o3,o4,o5,o6,o7, a0,a1,a2,a3,a4,a5,a6,a7, b0,b1,b2,b3,b4,b5,b6,b7, c0,c1,c2,c3,c4,c5,c6,c7, d0,d1,d2,d3,d4,d5,d6,d7, halt]
+
+	# ---- program counter (state) and instruction fetch ----
+	DFF [pn0],[pc0]
+	DFF [pn1],[pc1]
+	DFF [pn2],[pc2]
+	DFF [pn3],[pc3]
+	DFF [pn4],[pc4]
+	DFF [pn5],[pc5]
+	DFF [pn6],[pc6]
+	DFF [pn7],[pc7]
+	ROM [pc0,pc1,pc2,pc3,pc4,pc5,pc6,pc7], [i0,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10,i11,i12,i13,i14,i15]
+
+	# ---- field extraction (buffers, so names are self-documenting) ----
+	# imm/addr = i0..i7 ; rb = i6,i7 ; ra = i8,i9 ; rd = i10,i11 ; op = i12..i15
+	BUF [i12],[op0]
+	BUF [i13],[op1]
+	BUF [i14],[op2]
+	BUF [i15],[op3]
+
+	# ---- decode: control signals from the opcode ----
+	NOT [op3],[nop3]
+	NOT [op2],[nop2]
+	NOT [op1],[nop1]
+	NOT [op0],[nop0]
+	AND [nop3,nop2],[isalu]               # 00xx -> ALU op
+	AND4 [nop3,op2,nop1,nop0],[isldi]      # 0100
+	AND4 [nop3,op2,nop1,op0],[isjmp]       # 0101
+	AND4 [nop3,op2,op1,nop0],[isbeqz]      # 0110
+	AND4 [nop3,op2,op1,op0],[isout]        # 0111
+	AND4 [op3,op2,op1,op0],[ishlt]         # 1111
+	OR [isalu,isldi],[regwrite]            # these ops write a register
+
+	# ---- register file read (two ports) ----
+	REG4READ [i8,i9, a0,a1,a2,a3,a4,a5,a6,a7, b0,b1,b2,b3,b4,b5,b6,b7, c0,c1,c2,c3,c4,c5,c6,c7, d0,d1,d2,d3,d4,d5,d6,d7], [ra0,ra1,ra2,ra3,ra4,ra5,ra6,ra7]
+	REG4READ [i6,i7, a0,a1,a2,a3,a4,a5,a6,a7, b0,b1,b2,b3,b4,b5,b6,b7, c0,c1,c2,c3,c4,c5,c6,c7, d0,d1,d2,d3,d4,d5,d6,d7], [rb0,rb1,rb2,rb3,rb4,rb5,rb6,rb7]
+
+	# ---- ALU and write-back data ----
+	ALU8 [op0,op1, ra0,ra1,ra2,ra3,ra4,ra5,ra6,ra7, rb0,rb1,rb2,rb3,rb4,rb5,rb6,rb7], [al0,al1,al2,al3,al4,al5,al6,al7]
+	# writeData = LDI ? imm8 : aluResult
+	MUX8 [isldi, al0,al1,al2,al3,al4,al5,al6,al7, i0,i1,i2,i3,i4,i5,i6,i7], [w0,w1,w2,w3,w4,w5,w6,w7]
+
+	# ---- register write enables (decode rd, gate with regwrite) ----
+	WDEC [i10,i11, regwrite], [we0,we1,we2,we3]
+	REG8 [we0, w0,w1,w2,w3,w4,w5,w6,w7], [a0,a1,a2,a3,a4,a5,a6,a7]
+	REG8 [we1, w0,w1,w2,w3,w4,w5,w6,w7], [b0,b1,b2,b3,b4,b5,b6,b7]
+	REG8 [we2, w0,w1,w2,w3,w4,w5,w6,w7], [c0,c1,c2,c3,c4,c5,c6,c7]
+	REG8 [we3, w0,w1,w2,w3,w4,w5,w6,w7], [d0,d1,d2,d3,d4,d5,d6,d7]
+
+	# ---- OUT register: loads ra when isout ----
+	REG8 [isout, ra0,ra1,ra2,ra3,ra4,ra5,ra6,ra7], [o0,o1,o2,o3,o4,o5,o6,o7]
+
+	# ---- halt latch: once set, stays set ----
+	OR [halt,ishlt],[haltnext]
+	DFF [haltnext],[halt]
+
+	# ---- next PC ----
+	INC8 [pc0,pc1,pc2,pc3,pc4,pc5,pc6,pc7], [p10,p11,p12,p13,p14,p15,p16,p17]
+	NOR8 [ra0,ra1,ra2,ra3,ra4,ra5,ra6,ra7], [raZero]
+	AND [isbeqz,raZero],[takeb]
+	OR [isjmp,takeb],[dojump]
+	# pc+1 or jump target (addr8 = imm field)
+	MUX8 [dojump, p10,p11,p12,p13,p14,p15,p16,p17, i0,i1,i2,i3,i4,i5,i6,i7], [u0,u1,u2,u3,u4,u5,u6,u7]
+	# if halted, hold pc
+	MUX8 [halt, u0,u1,u2,u3,u4,u5,u6,u7, pc0,pc1,pc2,pc3,pc4,pc5,pc6,pc7], [pn0,pn1,pn2,pn3,pn4,pn5,pn6,pn7]
+
+# ============================================================================
+#  Register file helpers
+# ============================================================================
+# Read one 8-bit register selected by sel (2 bits) from R0..R3.
+REG4READ:
+	IN [sel0, sel1, a0,a1,a2,a3,a4,a5,a6,a7, b0,b1,b2,b3,b4,b5,b6,b7, c0,c1,c2,c3,c4,c5,c6,c7, d0,d1,d2,d3,d4,d5,d6,d7]
+	OUT [y0,y1,y2,y3,y4,y5,y6,y7]
+	MUX8 [sel0, a0,a1,a2,a3,a4,a5,a6,a7, b0,b1,b2,b3,b4,b5,b6,b7], [lo0,lo1,lo2,lo3,lo4,lo5,lo6,lo7]
+	MUX8 [sel0, c0,c1,c2,c3,c4,c5,c6,c7, d0,d1,d2,d3,d4,d5,d6,d7], [hi0,hi1,hi2,hi3,hi4,hi5,hi6,hi7]
+	MUX8 [sel1, lo0,lo1,lo2,lo3,lo4,lo5,lo6,lo7, hi0,hi1,hi2,hi3,hi4,hi5,hi6,hi7], [y0,y1,y2,y3,y4,y5,y6,y7]
+
+# Decode rd (2 bits) into 4 write-enables, each gated by `we`.
+WDEC:
+	IN [rd0, rd1, we]
+	OUT [e0, e1, e2, e3]
+	NOT [rd0],[nrd0]
+	NOT [rd1],[nrd1]
+	AND4 [nrd1,nrd0,we,we],[e0]
+	AND4 [nrd1,rd0,we,we],[e1]
+	AND4 [rd1,nrd0,we,we],[e2]
+	AND4 [rd1,rd0,we,we],[e3]
+
+# 8-bit register with load-enable.
+REG8:
+	IN [en, d0,d1,d2,d3,d4,d5,d6,d7]
+	OUT [q0,q1,q2,q3,q4,q5,q6,q7]
+	EDFF [en,d0],[q0]
+	EDFF [en,d1],[q1]
+	EDFF [en,d2],[q2]
+	EDFF [en,d3],[q3]
+	EDFF [en,d4],[q4]
+	EDFF [en,d5],[q5]
+	EDFF [en,d6],[q6]
+	EDFF [en,d7],[q7]
+
+# 1-bit flip-flop with load-enable: next = en ? d : q.
+EDFF:
+	IN [en, d]
+	OUT [q]
+	MUX2 [en, q, d], [nd]
+	DFF [nd], [q]
+
+# ============================================================================
+#  ALU: op 00=add 01=sub 10=and 11=or
+# ============================================================================
+ALU8:
+	IN [op0, op1, a0,a1,a2,a3,a4,a5,a6,a7, b0,b1,b2,b3,b4,b5,b6,b7]
+	OUT [y0,y1,y2,y3,y4,y5,y6,y7]
+	ZERO [a0],[z]
+	ONE [a0],[one]
+	ADD8 [a0,a1,a2,a3,a4,a5,a6,a7, b0,b1,b2,b3,b4,b5,b6,b7, z], [ad0,ad1,ad2,ad3,ad4,ad5,ad6,ad7, adc]
+	NOT8 [b0,b1,b2,b3,b4,b5,b6,b7],[nb0,nb1,nb2,nb3,nb4,nb5,nb6,nb7]
+	ADD8 [a0,a1,a2,a3,a4,a5,a6,a7, nb0,nb1,nb2,nb3,nb4,nb5,nb6,nb7, one], [sb0,sb1,sb2,sb3,sb4,sb5,sb6,sb7, sbc]
+	AND8 [a0,a1,a2,a3,a4,a5,a6,a7, b0,b1,b2,b3,b4,b5,b6,b7],[an0,an1,an2,an3,an4,an5,an6,an7]
+	OR8 [a0,a1,a2,a3,a4,a5,a6,a7, b0,b1,b2,b3,b4,b5,b6,b7],[or0,or1,or2,or3,or4,or5,or6,or7]
+	MUX8 [op0, ad0,ad1,ad2,ad3,ad4,ad5,ad6,ad7, sb0,sb1,sb2,sb3,sb4,sb5,sb6,sb7],[lo0,lo1,lo2,lo3,lo4,lo5,lo6,lo7]
+	MUX8 [op0, an0,an1,an2,an3,an4,an5,an6,an7, or0,or1,or2,or3,or4,or5,or6,or7],[hi0,hi1,hi2,hi3,hi4,hi5,hi6,hi7]
+	MUX8 [op1, lo0,lo1,lo2,lo3,lo4,lo5,lo6,lo7, hi0,hi1,hi2,hi3,hi4,hi5,hi6,hi7],[y0,y1,y2,y3,y4,y5,y6,y7]
+
+# ============================================================================
+#  8-bit bitwise logic (step 3 already gave us ADD8 / NOT8 / INC8 / MUX8)
+# ============================================================================
+AND8:
+	IN [a0,a1,a2,a3,a4,a5,a6,a7, b0,b1,b2,b3,b4,b5,b6,b7]
+	OUT [y0,y1,y2,y3,y4,y5,y6,y7]
+	AND [a0,b0],[y0]
+	AND [a1,b1],[y1]
+	AND [a2,b2],[y2]
+	AND [a3,b3],[y3]
+	AND [a4,b4],[y4]
+	AND [a5,b5],[y5]
+	AND [a6,b6],[y6]
+	AND [a7,b7],[y7]
+
+OR8:
+	IN [a0,a1,a2,a3,a4,a5,a6,a7, b0,b1,b2,b3,b4,b5,b6,b7]
+	OUT [y0,y1,y2,y3,y4,y5,y6,y7]
+	OR [a0,b0],[y0]
+	OR [a1,b1],[y1]
+	OR [a2,b2],[y2]
+	OR [a3,b3],[y3]
+	OR [a4,b4],[y4]
+	OR [a5,b5],[y5]
+	OR [a6,b6],[y6]
+	OR [a7,b7],[y7]
+
+# NOR of 8 bits:  1 only when the whole byte is zero (used for BEQZ).
+NOR8:
+	IN [a0,a1,a2,a3,a4,a5,a6,a7]
+	OUT [y]
+	OR [a0,a1],[e1]
+	OR [a2,a3],[e2]
+	OR [a4,a5],[e3]
+	OR [a6,a7],[e4]
+	OR [e1,e2],[f1]
+	OR [e3,e4],[f2]
+	OR [f1,f2],[g]
+	NOT [g],[y]

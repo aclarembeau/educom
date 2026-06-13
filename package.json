@@ -1,0 +1,27 @@
+{
+  "name": "compute",
+  "version": "1.0.0",
+  "description": "A TypeScript computer simulator: build a computer out of NAND gates and run it.",
+  "type": "module",
+  "bin": {
+    "compute": "./src/cli.ts"
+  },
+  "scripts": {
+    "compute": "node --experimental-strip-types src/cli.ts",
+    "serve": "node --experimental-strip-types src/cli.ts serve",
+    "run": "node --experimental-strip-types src/cli.ts run",
+    "tick": "node --experimental-strip-types src/cli.ts tick",
+    "table": "node --experimental-strip-types src/cli.ts table",
+    "info": "node --experimental-strip-types src/cli.ts info",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types test/run.ts"
+  },
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "typescript": "^6.0.3"
+  }
+}

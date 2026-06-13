@@ -1,0 +1,89 @@
+# ============================================================================
+#  Step 1 — the rest of the basic gate family, from NAND (and step 0's gates)
+# ============================================================================
+#
+#  This file `#% import`s step 0, so `NOT` and `AND` are already available —
+#  we don't redefine them. We add the gates the arithmetic steps will need:
+#
+#     OR, XOR            the other two-input logic gates
+#     BUF                a pass-through (NOT twice) — handy for renaming a wire
+#     ZERO, ONE          constant 0 / 1, derived from any wire
+#     MUX2               a 2:1 selector:  y = s ? b : a
+#     AND4               a 4-input AND
+#
+#  The entry circuit `gates` just exposes AND / OR / XOR of two switches so you
+#  can eyeball the truth table:
+#
+#     npm run table -- workbench/1-basic-gates.compute
+
+#% import : 0-simple-and.compute
+
+#% entry  : gates
+#% title  : Step 1 — Basic Gates (AND / OR / XOR)
+#% switch a : A
+#% switch b : B
+#% led g_and : A AND B
+#% led g_or  : A OR  B
+#% led g_xor : A XOR B
+
+gates:
+	IN [a, b]
+	OUT [g_and, g_or, g_xor]
+	AND [a, b], [g_and]
+	OR  [a, b], [g_or]
+	XOR [a, b], [g_xor]
+
+# a OR b = NAND(NOT a, NOT b)   (De Morgan)
+OR:
+	IN [a, b]
+	OUT [c]
+	NOT [a], [na]
+	NOT [b], [nb]
+	NAND [na, nb], [c]
+
+# a XOR b: 1 exactly when the inputs differ.
+XOR:
+	IN [a, b]
+	OUT [c]
+	NAND [a, b], [t]
+	NAND [a, t], [u]
+	NAND [b, t], [v]
+	NAND [u, v], [c]
+
+# Buffer: invert twice to get the input back (a clean copy onto a new wire).
+BUF:
+	IN [a]
+	OUT [b]
+	NOT [a], [t]
+	NOT [t], [b]
+
+# Constant 0 = a AND NOT a   (always false, whatever `a` is).
+ZERO:
+	IN [a]
+	OUT [z]
+	NOT [a], [na]
+	AND [a, na], [z]
+
+# Constant 1 = NOT(a AND NOT a)   (always true).
+ONE:
+	IN [a]
+	OUT [o]
+	NOT [a], [na]
+	NAND [a, na], [o]
+
+# 2:1 multiplexer:  y = s ? b : a.
+MUX2:
+	IN [s, a, b]
+	OUT [y]
+	NOT [s], [ns]
+	AND [ns, a], [t0]
+	AND [s, b], [t1]
+	OR [t0, t1], [y]
+
+# 4-input AND.
+AND4:
+	IN [a, b, c, d]
+	OUT [y]
+	AND [a, b], [e]
+	AND [c, d], [f]
+	AND [e, f], [y]

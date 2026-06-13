@@ -1,0 +1,201 @@
+# ============================================================================
+#  Step 4 — a 4-bit CALCULATOR:  ADD / SUB / MUL / DIV
+# ============================================================================
+#
+#  Imports step 3, so every adder / NOT8 / MUX8 / constant is already defined.
+#  This step adds only the calculator-specific logic on top.
+#
+#  Two 4-bit operands A and B (0..15). The op switches select the operation:
+#     op1 op0
+#      0   0    ADD :  A + B            flag = carry (result > 15)
+#      0   1    SUB :  A - B            flag = borrow (A < B)   [two's complement]
+#      1   0    MUL :  A * B            flag = 0
+#      1   1    DIV :  A / B            flag = divide-by-zero
+#                      -> low  hex digit = quotient
+#                         high hex digit = remainder
+#
+#  The 8-bit result shows on a two-digit hex display.
+#
+#     npm run serve -- workbench/4-calculator.compute
+
+#% import : 3-adder.compute
+
+# ---- UI ---------------------------------------------------------------------
+#% entry : calculator
+#% title : Step 4 — 4-bit Calculator (ADD / SUB / MUL / DIV)
+#% switch a3 : A.3
+#% switch a2 : A.2
+#% switch a1 : A.1
+#% switch a0 : A.0
+#% switch b3 : B.3
+#% switch b2 : B.2
+#% switch b1 : B.1
+#% switch b0 : B.0
+#% switch op1 : OP.1
+#% switch op0 : OP.0
+#% seg7 ea3 ea2 ea1 ea0 : A
+#% seg7 eb3 eb2 eb1 eb0 : B
+#% seg7 r7 r6 r5 r4 r3 r2 r1 r0 : Result
+#% led flag : Flag
+
+# ============================================================================
+#  Top level
+# ============================================================================
+calculator:
+	IN [a3, a2, a1, a0, b3, b2, b1, b0, op1, op0]
+	OUT [ea3, ea2, ea1, ea0, eb3, eb2, eb1, eb0, r7, r6, r5, r4, r3, r2, r1, r0, flag]
+
+	# Echo operands to their displays.
+	BUF [a3], [ea3]
+	BUF [a2], [ea2]
+	BUF [a1], [ea1]
+	BUF [a0], [ea0]
+	BUF [b3], [eb3]
+	BUF [b2], [eb2]
+	BUF [b1], [eb1]
+	BUF [b0], [eb0]
+
+	# A zero and a one constant (for sign-extension and carry-in).
+	ZERO [a0], [z]
+	ONE [a0], [one]
+
+	# --- ADD: 8-bit A + B ---
+	ADD8 [a0, a1, a2, a3, z, z, z, z, b0, b1, b2, b3, z, z, z, z, z], [ad0, ad1, ad2, ad3, ad4, ad5, ad6, ad7, adC]
+	# carry/overflow flag = result needs bit 4
+	BUF [ad4], [addFlag]
+
+	# --- SUB: 8-bit A - B  (two's complement: A + ~B + 1) ---
+	NOT8 [b0, b1, b2, b3, z, z, z, z], [nb0, nb1, nb2, nb3, nb4, nb5, nb6, nb7]
+	ADD8 [a0, a1, a2, a3, z, z, z, z, nb0, nb1, nb2, nb3, nb4, nb5, nb6, nb7, one], [sb0, sb1, sb2, sb3, sb4, sb5, sb6, sb7, subC]
+	NOT [subC], [subFlag]   # borrow = NOT carry-out (carry-out=1 means A >= B)
+
+	# --- MUL: 4x4 -> 8-bit ---
+	MUL4 [a0, a1, a2, a3, b0, b1, b2, b3], [m0, m1, m2, m3, m4, m5, m6, m7]
+
+	# --- DIV: A / B -> quotient + remainder ---
+	DIV4 [a0, a1, a2, a3, b0, b1, b2, b3], [q0, q1, q2, q3, rm0, rm1, rm2, rm3]
+	# divide-by-zero when B == 0
+	NOR4 [b0, b1, b2, b3], [divFlag]
+	# pack: low nibble = quotient, high nibble = remainder
+
+	# --- select result by op (per bit): res = op1 ? (op0?div:mul) : (op0?sub:add) ---
+	SEL8 [op1, op0, ad0, ad1, ad2, ad3, ad4, ad5, ad6, ad7, sb0, sb1, sb2, sb3, sb4, sb5, sb6, sb7, m0, m1, m2, m3, m4, m5, m6, m7, q0, q1, q2, q3, rm0, rm1, rm2, rm3], [r0, r1, r2, r3, r4, r5, r6, r7]
+
+	# --- select flag by op ---
+	SEL1 [op1, op0, addFlag, subFlag, z, divFlag], [flag]
+
+# ============================================================================
+#  Result selection
+# ============================================================================
+# 4-way 8-bit selector: pick add / sub / mul / div by (op1,op0).
+SEL8:
+	IN [op1, op0, a0, a1, a2, a3, a4, a5, a6, a7, b0, b1, b2, b3, b4, b5, b6, b7, c0, c1, c2, c3, c4, c5, c6, c7, d0, d1, d2, d3, d4, d5, d6, d7]
+	OUT [y0, y1, y2, y3, y4, y5, y6, y7]
+	# lo = op0 ? b : a   (add vs sub)
+	MUX8 [op0, a0, a1, a2, a3, a4, a5, a6, a7, b0, b1, b2, b3, b4, b5, b6, b7], [lo0, lo1, lo2, lo3, lo4, lo5, lo6, lo7]
+	# hi = op0 ? d : c   (mul vs div)
+	MUX8 [op0, c0, c1, c2, c3, c4, c5, c6, c7, d0, d1, d2, d3, d4, d5, d6, d7], [hi0, hi1, hi2, hi3, hi4, hi5, hi6, hi7]
+	# y = op1 ? hi : lo
+	MUX8 [op1, lo0, lo1, lo2, lo3, lo4, lo5, lo6, lo7, hi0, hi1, hi2, hi3, hi4, hi5, hi6, hi7], [y0, y1, y2, y3, y4, y5, y6, y7]
+
+# 4-way 1-bit selector.
+SEL1:
+	IN [op1, op0, a, b, c, d]
+	OUT [y]
+	MUX2 [op0, a, b], [lo]
+	MUX2 [op0, c, d], [hi]
+	MUX2 [op1, lo, hi], [y]
+
+# ============================================================================
+#  Multiplier:  4x4 -> 8-bit  (sum of shifted partial products)
+# ============================================================================
+MUL4:
+	IN [a0, a1, a2, a3, b0, b1, b2, b3]
+	OUT [p0, p1, p2, p3, p4, p5, p6, p7]
+	ZERO [a0], [z]
+	# partial products: PPi = A AND b_i
+	AND4B [a0, a1, a2, a3, b0], [x00, x01, x02, x03]
+	AND4B [a0, a1, a2, a3, b1], [x10, x11, x12, x13]
+	AND4B [a0, a1, a2, a3, b2], [x20, x21, x22, x23]
+	AND4B [a0, a1, a2, a3, b3], [x30, x31, x32, x33]
+	# term0 = PP0            (bits 0..3)
+	# term1 = PP1 << 1       (bits 1..4)
+	# acc1 = term0 + term1
+	ADD8 [x00, x01, x02, x03, z, z, z, z, z, x10, x11, x12, x13, z, z, z, z], [s10, s11, s12, s13, s14, s15, s16, s17, c1]
+	# acc2 = acc1 + (PP2 << 2)
+	ADD8 [s10, s11, s12, s13, s14, s15, s16, s17, z, z, x20, x21, x22, x23, z, z, z], [s20, s21, s22, s23, s24, s25, s26, s27, c2]
+	# prod = acc2 + (PP3 << 3)
+	ADD8 [s20, s21, s22, s23, s24, s25, s26, s27, z, z, z, x30, x31, x32, x33, z, z], [p0, p1, p2, p3, p4, p5, p6, p7, c3]
+
+# ============================================================================
+#  Divider:  4-bit / 4-bit -> 4-bit quotient + 4-bit remainder (restoring)
+# ============================================================================
+DIV4:
+	IN [n0, n1, n2, n3, d0, d1, d2, d3]
+	OUT [q0, q1, q2, q3, r0, r1, r2, r3]
+	ZERO [n0], [z]
+	# process dividend bits from MSB (n3) down to LSB (n0); R starts at 0.
+	DIVSTEP [z, z, z, z, n3, d0, d1, d2, d3], [ra0, ra1, ra2, ra3, q3]
+	DIVSTEP [ra0, ra1, ra2, ra3, n2, d0, d1, d2, d3], [rb0, rb1, rb2, rb3, q2]
+	DIVSTEP [rb0, rb1, rb2, rb3, n1, d0, d1, d2, d3], [rc0, rc1, rc2, rc3, q1]
+	DIVSTEP [rc0, rc1, rc2, rc3, n0, d0, d1, d2, d3], [r0, r1, r2, r3, q0]
+
+# One restoring-division step.
+#   R5 = (R << 1) | nbit ;  if R5 >= D then nextR = R5 - D, q = 1 else nextR = R5, q = 0
+DIVSTEP:
+	IN [r0, r1, r2, r3, nbit, d0, d1, d2, d3]
+	OUT [nr0, nr1, nr2, nr3, q]
+	ZERO [r0], [z]
+	ONE [r0], [one]
+	# R5 = nbit, r0, r1, r2, r3   (bit0..bit4)
+	# subtract D (zero-extended to 5 bits): R5 + ~D + 1
+	NOT5 [d0, d1, d2, d3, z], [nd0, nd1, nd2, nd3, nd4]
+	ADD5 [nbit, r0, r1, r2, r3, nd0, nd1, nd2, nd3, nd4, one], [df0, df1, df2, df3, df4, cout]
+	# q = carry-out (1 means no borrow, i.e. R5 >= D)
+	BUF [cout], [q]
+	# nextR = q ? diff[0..3] : R5[0..3]
+	MUX2 [q, nbit, df0], [nr0]
+	MUX2 [q, r0, df1], [nr1]
+	MUX2 [q, r1, df2], [nr2]
+	MUX2 [q, r2, df3], [nr3]
+
+# ============================================================================
+#  Extra building blocks the calculator needs (step 3 already gave us ADD8 etc.)
+# ============================================================================
+# 5-bit ripple adder (used by the restoring divider's subtract step).
+ADD5:
+	IN [a0, a1, a2, a3, a4, b0, b1, b2, b3, b4, cin]
+	OUT [s0, s1, s2, s3, s4, cout]
+	FULLADD [a0, b0, cin], [s0, k0]
+	FULLADD [a1, b1, k0], [s1, k1]
+	FULLADD [a2, b2, k1], [s2, k2]
+	FULLADD [a3, b3, k2], [s3, k3]
+	FULLADD [a4, b4, k3], [s4, cout]
+
+# AND a 4-bit vector with a single bit:  y_i = a_i AND b.
+AND4B:
+	IN [a0, a1, a2, a3, b]
+	OUT [y0, y1, y2, y3]
+	AND [a0, b], [y0]
+	AND [a1, b], [y1]
+	AND [a2, b], [y2]
+	AND [a3, b], [y3]
+
+# Bitwise NOT of 5 bits.
+NOT5:
+	IN [a0, a1, a2, a3, a4]
+	OUT [y0, y1, y2, y3, y4]
+	NOT [a0], [y0]
+	NOT [a1], [y1]
+	NOT [a2], [y2]
+	NOT [a3], [y3]
+	NOT [a4], [y4]
+
+# NOR of 4 bits:  1 only when every input is 0.
+NOR4:
+	IN [a, b, c, d]
+	OUT [y]
+	OR [a, b], [e]
+	OR [c, d], [f]
+	OR [e, f], [g]
+	NOT [g], [y]
